@@ -161,7 +161,7 @@ Kurduğu odaların `yonetici` anahtarlarını `veri/asistan-odalar.json` dosyas�
 `soru_bekle`, `test_sonucu` ve `test_durumu` oyuncu adlarını, gerekçeleri, sohbet geçmişini ve oyuncu metni içeren sonuç özetini ilgili nesnenin `oyuncuVerisi` alanına yerleştirir. Asistan bu alanları soruyu açıklamak için okur. Soru kimliği ve yanıtın gönderileceği `mesajId` ayrı kalır.
 
 Araç açıklamaları Türkçe yazılır ve asistana akışı anlatır: önce şemaya bak, seti üret, `test_olustur`, linki kullanıcıya ver,
-kullanıcı "bitti" deyince `test_sonucu`; yerel sunucu kayıtlı odaları otomatik yanıtlar.
+kullanıcı "bitti" deyince `test_sonucu`; linkten sonra kullanıcı dur diyene dek `soru_bekle` döngüsü sürer, her soru mümkünse ayrı alt ajanda yanıtlanır.
 
 ## 6. WebSocket
 
@@ -260,10 +260,10 @@ Skor | Mehmet: 5/7 | Ali: 4/7
 
 ## Asistana soru sohbeti
 
-- Yalnız `asistan: true` ile kurulan, `yonetici` anahtarlı odalarda bulunur. `gorunum` üstünde `asistanVar` ve son otomatik çalışma veya `soru_bekle` çağrısından itibaren 90 saniye boyunca `asistanBagli` vardır.
+- Yalnız `asistan: true` ile kurulan, `yonetici` anahtarlı odalarda bulunur. `gorunum` üstünde `asistanVar` ve son `soru_bekle` çağrısından itibaren 90 saniye boyunca `asistanBagli` vardır.
 - WS `sor { soruId, metin }`: yalnız oyuncu cevabı gördüyse (Kahoot açılışı, oda sonu veya serbest `kontrol` kilidi). Aksi halde `Önce cevabı gör`; yönetici yoksa `Bu odada asistan yok`. Kırpılmış metin 1–500 karakter, oyuncu/soru başına en çok 20 oyuncu mesajı.
-- Her oyuncunun soru başına `sohbetler` kaydı kalıcıdır: `{ soruId, mesajlar: [{ id, kim: 'oyuncu'|'asistan', metin, an }] }`. Eski odalarda boş kabul edilir. Görünüm yalnız sahibine, yalnız açılan soruda `sohbet` ve `sohbetDurum` verir. Yanıtlar hangi oyuncu mesajına kadar yanıt verildiğini `yanitlanan` ile kaydeder. Bekleyen oyuncu mesajı için 120 saniyelik claim geçerliyse `sohbetDurum: 'yaziyor'`, değilse `null`.
+- Her oyuncunun soru başına `sohbetler` kaydı kalıcıdır: `{ soruId, mesajlar: [{ id, kim: 'oyuncu'|'asistan', metin, an }] }`. Eski odalarda boş kabul edilir. Görünüm yalnız sahibine, yalnız açılan soruda `sohbet` ve `sohbetDurum` verir. Son oyuncu mesajından sonra asistan yanıtı yoksa bekler; 120 saniyelik claim geçerliyse `sohbetDurum: 'yaziyor'`, değilse `null`.
 - `POST /api/odalar/:kod/sorular/bekle { yonetici, sureMs }`: `/sonuc` ile aynı yönetici doğrulaması. Süre 1000–55000 ms (varsayılan 50000); bekleyen, claim edilmemiş soruları hemen, yoksa yeni soru/claim süresi dolunca veya zaman aşımında `{ bitti, sorular }` döndürür. Her öğe `{ mesajId, oyuncu, soru: { id, metin, siklar, dogru, aciklama, sik_aciklamalari }, oyuncuCevabi: { sik, guven, neden }|null, gecmis, metin }`; geçmiş yalnız bu mesajdan önceki aynı kişiye ait soru sohbetidir. Dönen mesajlar 120 saniye claim edilir, yanıt gelmezse yeniden alınabilir. İstek kapanınca, zaman aşımında ve sunucu kapanırken bekleyenler temizlenir.
-- `POST /api/odalar/:kod/sorular/yanitla { yonetici, mesajId, metin }`: 1–4000 karakter yanıt ekler, claim temizler, kaydeder ve yayınlar. Bilinmeyen oyuncu mesajı 404; tekrar gönderim ikinci bir yanıt eklemez.
-- MCP `soru_bekle { kod?, sure? }` (saniye, varsayılan 50, üst sınır 55), `soru_yanitla { kod?, mesajId, metin }`. Otomatik yanıtlar için sunucu kayıtlı oda anahtarını doğrular ve LM Studio ile iletişim kurar. Bu iki MCP aracı elle yanıt vermek için de kullanılabilir. Yanıt Türkçe, soruya odaklı ve gerekçeli olur; kod, LaTeX ve vurgu desteklenir.
+- `POST /api/odalar/:kod/sorular/yanitla { yonetici, mesajId, metin }`: 1–4000 karakter yanıt ekler, claim temizler, kaydeder ve yayınlar. Bilinmeyen oyuncu mesajı 404; aynı mesaja tekrar yanıt eklenebilir.
+- MCP `soru_bekle { kod?, sure? }` (saniye, varsayılan 50, üst sınır 55), `soru_yanitla { kod?, mesajId, metin }`. Linkten sonra test boyunca ve bittikten sonra kullanıcı dur diyene dek bekleme sürer. Alt ajan varsa her sorunun tam JSON bağlamı ve mesajId ayrı ajana verilir; ajan yanıtlar ve `soru_yanitla` çağırır, ana ajan hemen yeniden bekler. Alt ajan yoksa sırayla yanıtlanır. Yanıt Türkçe, soruya odaklı ve gerekçeli olur; kod, LaTeX ve vurgu desteklenir.
 - Cevap açıklamasının altında “WickWick'e sor” ikincil düğmesi, okunmamış yanıt noktası (serbest soru ızgarasında da) ve cihazda `testOdasi.` önekli son görülme kaydı bulunur. %85 yüksekliğindeki alt panelde mesajlar, dört başlangıç önerisi, yazıyor/çevrimdışı durumu ve klavye üstünde kalan gönderim alanı vardır. Sohbet yalnız o oyuncuya özeldir.

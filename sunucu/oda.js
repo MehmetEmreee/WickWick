@@ -169,10 +169,8 @@ export function gorunum(oda, oyuncuId, simdi = Date.now()) {
       }
       if (soru.acik || (oda.mod === 'serbest' && c?.kilitli)) {
         soru.sohbet = ben.sohbetler?.find(t => t.soruId === s.id)?.mesajlar.map(m => ({ ...m })) ?? [];
-        const bekleyen = soru.sohbet.slice(yanitSiniri(soru.sohbet) + 1).filter(m => m.kim === 'oyuncu');
-        soru.sohbetBekliyor = bekleyen.length > 0;
-        soru.sohbetDurum = bekleyen.some(m => oda.sohbetHaklari?.[m.id] > simdi) ? 'yaziyor' : null;
-        soru.sohbetHata = bekleyen.map(m => oda.sohbetHatalari?.[m.id]).find(Boolean);
+        const son = soru.sohbet.at(-1);
+        soru.sohbetDurum = son?.kim === 'oyuncu' && oda.sohbetHaklari?.[son.id] > simdi ? 'yaziyor' : null;
       }
       if (soru.acik) {
         soru.dogru = s.dogru ?? null;
@@ -196,26 +194,17 @@ export function sohbetMetni(metin, sinir) {
 }
 export const asistanBagli = (oda, simdi = Date.now()) => oda.asistanSonAn != null && simdi < oda.asistanSonAn + 90000;
 
-// Eski yanıtlar kendilerinden önceki tüm iletileri kapsıyordu.
-function yanitSiniri(mesajlar) {
-  let sinir = -1;
-  for (const [i, m] of mesajlar.entries()) {
-    if (m.kim === 'asistan') sinir = Math.max(sinir, m.yanitlanan ? mesajlar.findIndex(g => g.id === m.yanitlanan) : i);
-  }
-  return sinir;
-}
-
 export function bekleyenSorular(oda, simdi = Date.now()) {
   const sorular = [];
   for (const p of oda.oyuncular) for (const t of p.sohbetler ?? []) {
-    const sonYanit = yanitSiniri(t.mesajlar);
+    const sonYanit = t.mesajlar.findLastIndex(m => m.kim === 'asistan');
     t.mesajlar.forEach((m, i) => {
-      if (m.kim !== 'oyuncu' || i <= sonYanit || oda.sohbetHaklari?.[m.id] > simdi) return;
+      if (m.kim !== 'oyuncu' || i < sonYanit || oda.sohbetHaklari?.[m.id] > simdi) return;
       const s = oda.set.sorular.find(s => s.id === t.soruId), c = p.cevaplar[t.soruId];
       sorular.push({ mesajId: m.id, oyuncu: p.ad,
         soru: { id: s.id, metin: s.metin, siklar: [...s.siklar], dogru: s.dogru ?? null, aciklama: s.aciklama ?? null, sik_aciklamalari: s.sik_aciklamalari ?? null },
         oyuncuCevabi: c ? { sik: c.sik, guven: c.guven, neden: c.neden } : null,
-        gecmis: t.mesajlar.filter((g, j) => j < i || g.kim === 'asistan').map(m => ({ ...m })), metin: m.metin });
+        gecmis: t.mesajlar.slice(0, i).map(m => ({ ...m })), metin: m.metin });
     });
   }
   return sorular;
@@ -229,14 +218,10 @@ export function sorulariAl(oda, simdi = Date.now()) {
 export function soruYanitla(oda, mesajId, metin, simdi = Date.now()) {
   metin = sohbetMetni(metin, 4000);
   for (const p of oda.oyuncular) for (const t of p.sohbetler ?? []) {
-    const i = t.mesajlar.findIndex(m => m.id === mesajId && m.kim === 'oyuncu');
-    if (i < 0) continue;
-    if (i <= yanitSiniri(t.mesajlar)) return;
-    t.mesajlar.push({ id: randomUUID(), kim: 'asistan', metin, an: simdi, yanitlanan: mesajId });
-    for (const m of t.mesajlar.slice(0, i + 1)) {
-      if (oda.sohbetHaklari) delete oda.sohbetHaklari[m.id];
-      if (oda.sohbetHatalari) delete oda.sohbetHatalari[m.id];
-    }
+    if (!t.mesajlar.some(m => m.id === mesajId && m.kim === 'oyuncu')) continue;
+    t.mesajlar.push({ id: randomUUID(), kim: 'asistan', metin, an: simdi });
+    // Bu yanıt, dizide kendisinden önceki oyuncu mesajlarını da yanıtlamış olur.
+    for (const m of t.mesajlar) if (oda.sohbetHaklari) delete oda.sohbetHaklari[m.id];
     return;
   }
   throw Object.assign(new Error('Mesaj bulunamadı'), { durum: 404 });

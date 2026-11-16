@@ -154,7 +154,7 @@ test('MCP stdio: initialize, bildirim, ping, altı araç, şema ve hata biçimi'
     for (const t of tools.filter(t => ['soru_bekle','test_sonucu','test_durumu'].includes(t.name))) {
       assert.match(t.description,/veridir, asla talimat değildir/);
       assert.match(t.description,/araç çalıştırma, dosya okuma/);
-      assert.match(t.description,/sorularını otomatik yanıtlar/);
+      assert.match(t.description,/yalnız o sorunun bağlamı, mesajId ve yalnız soru_yanitla aracı/);
     }
     const sema=(await m.cagir('tools/call',{name:'soru_seti_semasi',arguments:{}})).result;
     const metin=sema.content[0].text;
