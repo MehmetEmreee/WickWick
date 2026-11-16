@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { WebSocket } from 'ws';
@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import { setImmediate } from 'node:timers/promises';
 import { odaKur, oyuncuEkle, islem, gorunum, sorulariAl, bekleyenSorular, soruYanitla } from '../oda.js';
 import { sunucuOlustur } from '../sunucu.js';
+import { otomatikYanitBaslat } from '../otomatik-yanit.js';
 import { depoAc } from '../depo.js';
 
 const set = () => ({ surum: 1, set_id: 'sohbet', baslik: 'Sohbet', sorular: ['S1', 'S2'].map(id => ({ id, metin: 'İki artı iki?', siklar: ['3', '4'], dogru: 'B', aciklama: 'Topla', sik_aciklamalari: ['Eksik', 'Doğru'] })) });
@@ -82,9 +83,9 @@ test('Sohbet: bağlam, geçmiş, claim süresi, yanıt ve yinelenen yanıt', () 
   assert.equal(gorunum(oda, p.id, 3000).sorular[0].sohbetDurum, null);
   assert.equal(bekleyenSorular(oda, 3000).length, 0); assert.deepEqual(oda.sohbetHaklari, {});
   soruYanitla(oda, sorular[1].mesajId, 'x'.repeat(4000), 3001);
-  assert.equal(p.sohbetler[0].mesajlar.length, 4);
+  assert.equal(p.sohbetler[0].mesajlar.length, 3);
   sor(oda, p, 'Takip', 'S1', 3002);
-  assert.equal(sorulariAl(oda, 3003).sorular[0].gecmis.length, 4);
+  assert.equal(sorulariAl(oda, 3003).sorular[0].gecmis.length, 3);
 });
 test('Sohbet: kalıcı kayıt geri yüklenir', async () => {
   const dizin = await mkdtemp(join(tmpdir(), 'sohbet-depo-'));
@@ -211,4 +212,36 @@ test('Sohbet HTTP işleyicisi: claim, uyanma, süreler, bağlantı kapatma ve ka
     assert.deepEqual(son.res.veri.sorular, []); assert.equal(son.res.listenerCount('close'), 0);
     t.mock.timers.tick(200000); assert.equal(kopan.res.veri, undefined);
   } finally { if (app) await app.kapat(); t.mock.timers.reset(); await rm(dizin, { recursive: true, force: true }); }
+});
+
+test('Otomatik yanıt: güvenilir oda, yeniden deneme, eşzamanlı takip ve MCP ile tek teslim', async () => {
+  const dizin = await mkdtemp(join(tmpdir(), 'wickwick-isci-'));
+  const kayitDosyasi = join(dizin, 'asistan-odalar.json');
+  const { oda, p, diger } = kur(); kontrol(oda, p); sor(oda, p, 'Birinci');
+  const odalar = new Map([[oda.kod, oda]]);
+  let an = 10000, deneme = 0;
+  const isci = otomatikYanitBaslat({ odalar, kayitDosyasi, saat: () => an, degisti() {},
+    async yanitUret(soru) {
+      deneme++;
+      if (deneme === 1) throw new TypeError('Bağlantı yok');
+      if (deneme === 2) sor(oda, p, 'İkinci');
+      if (deneme === 3) soruYanitla(oda, soru.mesajId, 'Elle yanıt');
+      return 'Otomatik yanıt';
+    }
+  });
+  try {
+    await writeFile(kayitDosyasi, JSON.stringify([{ kod: oda.kod, yonetici: 'yanlış' }]));
+    await isci.uyandir(); assert.equal(deneme, 0);
+    await writeFile(kayitDosyasi, JSON.stringify([{ kod: oda.kod, yonetici: oda.yonetici }]));
+    await isci.uyandir();
+    assert.match(gorunum(oda, p.id).sorular[0].sohbetHata, /LM Studio/);
+    await isci.uyandir(); assert.equal(deneme, 1);
+    an += 60000; await isci.uyandir();
+    assert.equal(gorunum(oda, p.id).sorular[0].sohbetBekliyor, true);
+    assert.deepEqual(bekleyenSorular(oda).map(s => s.metin), ['İkinci']);
+    await isci.uyandir(); await isci.uyandir();
+    assert.equal(deneme, 3);
+    assert.deepEqual(gorunum(oda, p.id).sorular[0].sohbet.filter(m => m.kim === 'asistan').map(m => m.metin), ['Otomatik yanıt', 'Elle yanıt']);
+    assert.ok(!JSON.stringify(gorunum(oda, diger.id)).includes('Otomatik yanıt'));
+  } finally { await isci.kapat(); await rm(dizin, { recursive: true, force: true }); }
 });

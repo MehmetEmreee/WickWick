@@ -1,11 +1,12 @@
 import http from 'node:http';
 import { readFile, stat, realpath } from 'node:fs/promises';
-import { resolve, sep, extname } from 'node:path';
+import { resolve, sep, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces, hostname } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
 import { dogrula, GÖVDE_SINIRI } from './dogrula.js';
 import { odaKur, oyuncuEkle, kimlik, gorunum, islem, sureyiIsle, asistanSonucu, sorulariAl, bekleyenSorular, soruYanitla } from './oda.js';
+import { otomatikYanitBaslat } from './otomatik-yanit.js';
 import { depoAc } from './depo.js';
 
 const KOK = fileURLToPath(new URL('../', import.meta.url));
@@ -96,7 +97,7 @@ async function statik(req, res, yol) {
   }
 }
 
-export async function sunucuOlustur({ veriDosyasi = resolve(process.env.TEST_ODASI_VERI_DIZINI ?? resolve(KOK, 'veri'), 'odalar.json'), saat = Date.now } = {}) {
+export async function sunucuOlustur({ veriDosyasi = resolve(process.env.TEST_ODASI_VERI_DIZINI ?? resolve(KOK, 'veri'), 'odalar.json'), saat = Date.now, yanitUret } = {}) {
   const depo = depoAc(veriDosyasi);
   const odalar = await depo.oku(saat());
   let kapaniyor = false;
@@ -122,6 +123,7 @@ export async function sunucuOlustur({ veriDosyasi = resolve(process.env.TEST_ODA
   }
   for (const oda of odalar.values()) { sureyiIsle(oda, saat()); planla(oda); }
   depo.kaydet(odalar);
+  const otomatik = otomatikYanitBaslat({ odalar, kayitDosyasi: resolve(dirname(veriDosyasi), 'asistan-odalar.json'), degisti, saat, yanitUret });
   const sunucu = http.createServer(async (req, res) => {
     for (const [ad, deger] of Object.entries(GUVENLIK_BASLIKLARI)) res.setHeader(ad, deger);
     try {
@@ -261,6 +263,7 @@ export async function sunucuOlustur({ veriDosyasi = resolve(process.env.TEST_ODA
   }, 15000);
   async function kapat() {
     kapaniyor = true; clearInterval(nabiz);
+    await otomatik.kapat();
     for (const bekleyen of [...bekleyenler.values()]) for (const uyan of [...bekleyen]) uyan();
     for (const oda of odalar.values()) clearTimeout(oda.zamanlayici);
     for (const ws of wss.clients) ws.terminate();

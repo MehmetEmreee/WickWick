@@ -919,8 +919,8 @@ function sohbetAc(id, giris) {
     sohbetOkundu(s); sohbetIsaretle();
     bosSohbet.hidden = hepsi.length > 0;
     for (const b of oneriler.children) b.disabled = oturum.ws?.readyState !== 1;
-    const bekliyor = hepsi.at(-1)?.kim === 'oyuncu';
-    durum.textContent = hata || (s.sohbetDurum === 'yaziyor' ? 'Asistan yazıyor…' : bekliyor && !oturum.durum.asistanBagli ? 'Asistan şu an çevrimdışı; sohbet açılınca cevaplanacak.' : '');
+    const bekliyor = s.sohbetBekliyor || hepsi.at(-1)?.kim === 'oyuncu';
+    durum.textContent = hata || (s.sohbetDurum === 'yaziyor' ? 'Asistan yazıyor…' : s.sohbetHata || (bekliyor ? 'Sorun yanıt bekliyor…' : ''));
     gonderD.disabled = !alan.value.trim() || oturum.ws?.readyState !== 1;
   }
   function goruntu() {

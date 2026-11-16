@@ -21,7 +21,7 @@ Yerel ağda çalışan, hesap istemeyen, tamamen Türkçe bir canlı test uygula
 - **Kod gösterimi** — ` ```cpp ` çitli bloklar temalı, sözdizimi renkli kod kutusunda; `satır içi kod` ise küçük bir etiket olarak çizilir. Ters tırnaksız eski setlerdeki kod da sezgisel olarak algılanır. `<b>`, `<i>`, `<u>` vurgu olur; başka HTML metin olarak görünür.
 - **Mobil odaklı arayüz** — açılıp kapanan soru numarası ızgarası, yapışkan alt eylem çubuğu, durum rozetleri, sade lobi, ana sayfada “Devam et” kartı ve gerekçe için “+ Not ekle”.
 - **Kalıcı odalar** — odalar diske atomik yazılır; sunucu yeniden başlasa da süreler kaldığı yerden devam eder.
-- **WickWick’e sor** — asistan odalarında cevabı gördükten sonra açıklamanın altından özel soru sohbetini açın. Yanıt canlı gelir; okunmamış yanıt noktası ve çevrimdışı durumu gösterilir. Asistan `soru_bekle` ile bekler, `soru_yanitla` ile yanıtlar; kullanıcı dur diyene dek test sonrasında da devam eder.
+- **WickWick’e sor** — asistan odalarında cevabı gördükten sonra açıklamanın altından özel soru sohbetini açın. WickWick test sırasında ve sonrasında yanıtı doğrudan bu sohbete gönderir.
 - **Asistan entegrasyonu (MCP)** — “Beni şu konudan 8 soruyla sına” deyin; asistan soruları üretir, odayı kurar, linki verir ve test bitince sonuçlarınızı yorumlar.
 - **Sade yapı** — çerçeve yok, derleyici yok. Düz HTML + CSS + ES modülleri ve Node.js.
 
@@ -113,7 +113,7 @@ Proje, Node.js 22+ ile ek bağımlılık gerektirmeyen bir stdio MCP sunucusu i�
 
 `test_olustur`, oda kurmadan önce görünür açıklamaları denetler: `aciklama` en az 120 karakter, her şık açıklaması en az 30 karakter ve aynı soruda birbirinden farklı olmalı; `aciklamasiz: true` yalnız kullanıcı açıkça açıklamasız test veya gizleme istediğinde bu denetimi atlar (uygulamaya yapıştırma ve `/api/dogrula` değişmez).
 
-Linkten sonra asistan, kullanıcı dur diyene dek `soru_bekle` döngüsünü sürdürür; alt ajan varsa her soruyu ayrı ajana verip paralel yanıtlatır. Sohbet protokolü: WS `sor { soruId, metin }`; yönetici anahtarıyla `POST /api/odalar/:kod/sorular/bekle` ve `POST /api/odalar/:kod/sorular/yanitla` (ayrıntılar [şartnamede](SARTNAME.md#asistana-soru-sohbeti)).
+Sunucu, MCP ile kaydedilmiş odalardaki soruları otomatik işler. LM Studio yerel sunucusuna (`127.0.0.1:1234`) yalnız ilgili soruyu, oyuncunun cevabını ve o sorunun özel sohbetini gönderir. Varsayılan model `google/gemma-4-e4b`; başka bir kurulu model için `WICKWICK_MODEL` kullanılabilir. LM Studio kapalıysa soru saklanır ve otomatik olarak yeniden denenir. Sohbet protokolü: WS `sor { soruId, metin }`; yönetici anahtarıyla `POST /api/odalar/:kod/sorular/bekle` ve `POST /api/odalar/:kod/sorular/yanitla` (ayrıntılar [şartnamede](SARTNAME.md#asistana-soru-sohbeti)).
 
 **Claude Code**
 
