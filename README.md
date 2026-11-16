@@ -15,9 +15,11 @@ Yerel ağda çalışan, hesap istemeyen, tamamen Türkçe bir canlı test uygula
 - **İki oyun modu**
   - 🏁 **Kahoot** — herkes aynı soruyu aynı anda görür, süreye karşı yarışır. Hızlı ve doğru cevap daha çok puan getirir.
   - 📝 **Serbest** — herkes kendi hızında, sorular arasında ileri-geri gezerek çözer; isteğe bağlı toplam süre.
-- **Güven seviyesi ve gerekçe** — her cevaba 1–3 arası güven ve kısa bir “neden” eklenir; açılışta herkesin düşüncesi yan yana görünür.
-- **Gizlilik önce** — başkasının cevabı, doğru şık ve açıklama, açılış anına kadar hiçbir istemciye gönderilmez. Sunucu her kişiye kendine özel görünüm üretir.
+- **Güven seviyesi ve gerekçe** — her cevaba isteğe bağlı 1–3 arası güven ve kısa bir “neden” eklenir; soru boş da bırakılabilir (şıkkı kaldırarak ya da Kahoot'ta “Boş bırak” ile); açılışta herkesin düşüncesi yan yana görünür.
+- **Gizlilik önce** — başkasının cevabı açılış anına kadar gönderilmez. Serbest modda “Cevabı gör” yalnız o soruyu kilitleyen kişiye doğru şık ve açıklamayı açar. Sunucu her kişiye kendine özel görünüm üretir.
 - **LaTeX ve görseller** — `$…$` / `$$…$$` formülleri KaTeX ile internetsiz çizilir; sorulara URL ya da gömülü SVG/PNG grafik eklenebilir.
+- **Kod gösterimi** — ` ```cpp ` çitli bloklar temalı, sözdizimi renkli kod kutusunda; `satır içi kod` ise küçük bir etiket olarak çizilir. Ters tırnaksız eski setlerdeki kod da sezgisel olarak algılanır. `<b>`, `<i>`, `<u>` vurgu olur; başka HTML metin olarak görünür.
+- **Mobil odaklı arayüz** — açılıp kapanan soru numarası ızgarası, yapışkan alt eylem çubuğu, durum rozetleri, sade lobi, ana sayfada “Devam et” kartı ve gerekçe için “+ Not ekle”.
 - **Kalıcı odalar** — odalar diske atomik yazılır; sunucu yeniden başlasa da süreler kaldığı yerden devam eder.
 - **Asistan entegrasyonu (MCP)** — “Beni şu konudan 8 soruyla sına” deyin; asistan soruları üretir, odayı kurar, linki verir ve test bitince sonuçlarınızı yorumlar.
 - **Sade yapı** — çerçeve yok, derleyici yok. Düz HTML + CSS + ES modülleri ve Node.js.
@@ -43,8 +45,8 @@ Port değiştirmek için `PORT=3001 npm start`. macOS güvenlik duvarı sorarsa 
 1. Arayüzde bir soru seti içe aktarın (örnekler `ornek/` klasöründe).
 2. Modu seçip odayı kurun; 5 haneli oda kodu ve paylaşım linki oluşur.
 3. En fazla 4 kişi adıyla katılır. Kurucu **Başlat** der.
-4. Her soruda şık + güven seçilir, istenirse gerekçe yazılır ve cevap kilitlenir.
-5. Açılışta doğru cevap, açıklama, herkesin seçimi ve puan tablosu görünür.
+4. Her soruda şık seçilir (güven ve gerekçe isteğe bağlı, soru boş da bırakılabilir) ve cevap kilitlenir.
+5. Açılışta doğru cevap, açıklama, herkesin seçimi ve puan tablosu görünür. Sonuç ekranında “Yanlışlarım” süzgeci vardır; kendi yanlış şıkkın kırmızı ve “✗ Yanlış” işaretli gelir, kimin neyi seçtiği (güveniyle) şıkların içinde, açıklama ise şıkların hemen altında görünür.
 
 | | Kahoot | Serbest |
 | --- | --- | --- |
@@ -89,6 +91,7 @@ Port değiştirmek için `PORT=3001 npm start`. macOS güvenlik duvarı sorarsa 
 | `sure` | — | 5–600 saniye; Kahoot'ta o sorunun süresini ezer |
 
 Hatalı setlerde doğrulayıcı tüm hataları alan adıyla birlikte Türkçe listeler, örn. `sorular[2].siklar: 2 ile 5 arası şık olmalı (6 var)`.
+Yeni test ekranında yapıştırılan JSON otomatik doğrulanır (“Kontrol et” düğmesi yoktur). Kod için metin/şık/açıklamada çitli blok ya da tek ters tırnak kullanılır.
 Ayrıntılı sözleşme için [SARTNAME.md](SARTNAME.md) dosyasına bakın.
 
 ## 🤖 Asistanla kullanım (MCP)
@@ -97,7 +100,7 @@ Proje, Node.js 22+ ile ek bağımlılık gerektirmeyen bir stdio MCP sunucusu i�
 
 | Araç | Ne yapar? |
 | --- | --- |
-| `soru_seti_semasi` | Soru seti biçimini asistana anlatır |
+| `soru_seti_semasi` | Soru seti biçimini asistana anlatır (kod için çitli blok/ters tırnak ve `<b>` vurgusu dahil) |
 | `test_olustur` | Seti yükler, odayı kurar, telefon linkini döner |
 | `test_durumu` | Evre ve ilerleme bilgisini verir |
 | `test_sonucu` | Test bitince sonuçları okur |

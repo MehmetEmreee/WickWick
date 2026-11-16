@@ -98,7 +98,6 @@ for (const mod of ['kahoot','serbest']) test(`HTTP + iki WS: ${mod} tam tur, giz
     assert.deepEqual((await http('/api/gecmis',{odalar:[{...a,anahtar:'yanlış'}]})).veri,{odalar:[]});
     const getGecmis=await http('/api/gecmis'); assert.equal(getGecmis.kod,404); sizintiYok(getGecmis.veri);
     if(mod==='serbest') {
-      iki.gonder({tur:'gonder'}); assert.deepEqual((await iki.bekle(m=>m.tur==='hata')).eksikler,['Q']);
       bir.gonder({tur:'gonder'});
       await iki.bekle(m=>m.tur==='durum'&&m.durum.oyuncular[0].gonderdi);
     }

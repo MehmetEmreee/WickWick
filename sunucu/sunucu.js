@@ -162,7 +162,7 @@ export async function sunucuOlustur({ veriDosyasi = resolve(process.env.TEST_ODA
         if (sureyiIsle(oda, saat())) degisti(oda);
         islem(oda, p, JSON.parse(veri.toString()), saat());
         degisti(oda);
-      } catch (e) { ws.send(JSON.stringify({ tur: 'hata', ileti: e.message, ...(e.eksikler ? { eksikler: e.eksikler } : {}) })); }
+      } catch (e) { ws.send(JSON.stringify({ tur: 'hata', ileti: e.message })); }
     });
     ws.on('error', () => {});
     ws.on('close', () => { p.baglantilar.delete(ws); if (!kapaniyor) degisti(oda); });

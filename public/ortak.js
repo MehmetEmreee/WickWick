@@ -1,3 +1,5 @@
+import { metinParcalari, satirParcalari, kodSatirlari, kodGibi, eskiSatirIci } from './kod.js';
+
 // Ortak yardımcılar: DOM, yerel kayıt, HTTP, KaTeX, görsel, kopyalama.
 
 export const HARF = 'ABCDE';
@@ -130,8 +132,48 @@ export function mat(dugum) {
   }
   return dugum;
 }
-// Metni textContent ile yazan, sonra KaTeX uygulayan düğüm.
-export const matDugum = (etiket, sinif, metin) => mat(el(etiket, { class: `mat ${sinif}`, text: metin }));
+// Satır içi kod: renkli jetonlar, hepsi textContent ile.
+function satirKodu(kod) {
+  const cocuk = [];
+  kodSatirlari(kod).forEach((satir, i) => {
+    if (i) cocuk.push('\n');
+    for (const j of satir) cocuk.push(j.tur ? el('span', { class: `k-${j.tur}`, text: j.metin }) : j.metin);
+  });
+  return el('code', { class: 'satir-kod' }, cocuk);
+}
+// Satır içi parçalar: kod ve <b>/<i>/<u> gerçek öğe, metin daima metin düğümü.
+function satirDugumleri(parcalar) {
+  return parcalar.map((p) => (p.tur === 'metin' ? p.metin
+    : p.tur === 'kod' ? satirKodu(p.metin)
+      : el(p.tur, {}, satirDugumleri(p.parcalar))));
+}
+// Metin parçası; eski (ters tırnaksız) C++ metninde satır içi kod parçaları da renklenir.
+function metinDugumleri(metin, eski) {
+  const eskiParcalar = eski ? eskiSatirIci(metin) : null;
+  if (!eskiParcalar) return satirDugumleri(satirParcalari(metin));
+  return eskiParcalar.flatMap((p) => (p.tur === 'kod' ? [satirKodu(p.metin)] : satirDugumleri(satirParcalari(p.metin))));
+}
+// Kod kutusu: her satır ayrı öğe (numara CSS sayacıyla), jetonlar textContent ile.
+function kodBlogu(kod) {
+  return el('pre', { class: 'kod-blok', 'aria-label': 'Kod örneği' },
+    el('code', {}, kodSatirlari(kod).map((satir) => el('span', { class: 'kod-satir' },
+      satir.map((j) => (j.tur ? el('span', { class: `k-${j.tur}`, text: j.metin }) : j.metin))))));
+}
+// Metni güvenle yazan, sonra KaTeX uygulayan düğüm.
+export function matDugum(etiket, sinif, metin) {
+  const parcalar = metinParcalari(metin, sinif === 'soru-metin');
+  const kodVar = parcalar.some((p) => p.tur === 'kod');
+  const sik = sinif === 'sik-metin' || sinif === 'ss-metin';
+  const kodSik = !kodVar && sik && kodGibi(metin);
+  const eski = sinif === 'soru-metin' || (sik && !kodSik);
+  // Blok kod için paragraf yerine geçerli bir blok kapsayıcı kullan.
+  const dugum = el(kodVar && etiket === 'p' ? 'div' : etiket, { class: `mat ${sinif}` });
+  for (const p of parcalar) {
+    if (p.tur === 'kod') dugum.append(kodBlogu(p.metin));
+    else dugum.append(mat(el('span', { class: 'duz-metin' }, kodSik ? [satirKodu(p.metin)] : metinDugumleri(p.metin, eski))));
+  }
+  return dugum;
+}
 
 // ---- Görsel: yalnız http/https ya da data:image/(png|jpeg|gif|webp|svg+xml)
 export function gorselGecerli(u) {

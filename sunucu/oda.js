@@ -26,7 +26,7 @@ export function odaKur({ set, mod, soruSuresi = 30, toplamSure = 0, ad, asistan 
 }
 
 export function kimlik(oda, id, anahtar) { return oda?.oyuncular.find(p => p.id === id && p.anahtar === anahtar); }
-export const tamam = c => !!c?.sik && Number.isInteger(c.guven) && c.guven >= 1 && c.guven <= 3;
+export const tamam = c => !!c?.sik;
 export function acildi(oda, i) { return oda.evre === 'bitti' || (oda.mod === 'kahoot' && (i < oda.sira || (i === oda.sira && oda.evre === 'acik'))); }
 export function puan(soru, cevap, sureMs, baslangic) {
   return soru.dogru && cevap?.sik === soru.dogru ? Math.round(1000 * (1 - Math.min(1, Math.max(0, (cevap.an - baslangic) / sureMs)) / 2)) : 0;
@@ -68,20 +68,24 @@ export function islem(oda, p, m, simdi = Date.now()) {
     const s = oda.set.sorular.find(s => s.id === m.soruId);
     gerek(s && (!kilit || s === oda.set.sorular[oda.sira]), 'soruId: geçerli soru değil');
     gerek(!p.cevaplar[s.id]?.kilitli, 'Cevap zaten kilitli');
-    gerek((!kilit && m.sik === null) || (typeof m.sik === 'string' && m.sik.length === 1 && HARFLER.slice(0, s.siklar.length).includes(m.sik)), 'sik: geçerli şık seçilmeli');
-    gerek((!kilit && m.guven === null) || (Number.isInteger(m.guven) && m.guven >= 1 && m.guven <= 3), 'guven: 1–3 olmalı');
+    gerek(m.sik === null || (typeof m.sik === 'string' && m.sik.length === 1 && HARFLER.slice(0, s.siklar.length).includes(m.sik)), 'sik: geçerli şık olmalı ya da boş (null) bırakılmalı');
+    gerek(m.guven === null || (Number.isInteger(m.guven) && m.guven >= 1 && m.guven <= 3), 'guven: 1–3 olmalı ya da boş (null) bırakılmalı');
     gerek(m.neden === undefined || typeof m.neden === 'string', 'neden: metin olmalı');
-    const c = { sik: m.sik, guven: m.guven, neden: (m.neden ?? '').replace(/[\r\n\u2028\u2029]+/g, ' ').slice(0, 120), kilitli: kilit, an: simdi };
+    const c = { sik: m.sik, guven: m.sik === null && kilit ? null : m.guven, neden: (m.neden ?? '').replace(/[\r\n\u2028\u2029]+/g, ' ').slice(0, 120), kilitli: kilit, an: simdi };
     if (kilit) c.puan = puan(s, c, oda.sureMs, oda.baslangic);
     p.cevaplar[s.id] = c;
     if (kilit && oda.oyuncular.every(p => p.cevaplar[s.id]?.kilitli)) ac(oda);
   } else if (m.tur === 'konum') {
     gerek(oda.mod === 'serbest' && oda.evre !== 'lobi' && Number.isInteger(m.sira) && m.sira >= 0 && m.sira < oda.set.sorular.length, 'sira: geçersiz konum');
     p.konum = m.sira;
+  } else if (m.tur === 'kontrol') {
+    // Serbest modda tek soruyu kilitleyip doğru cevabı yalnız o oyuncuya açar.
+    gerek(oda.mod === 'serbest' && oda.evre === 'cozum' && !p.gonderdi, 'Bu evrede cevap kontrol edilemez');
+    const s = oda.set.sorular.find(s => s.id === m.soruId);
+    gerek(s, 'soruId: geçerli soru değil');
+    p.cevaplar[s.id] = { sik: null, guven: null, neden: '', an: simdi, ...p.cevaplar[s.id], kilitli: true };
   } else if (m.tur === 'gonder') {
     gerek(oda.mod === 'serbest' && oda.evre === 'cozum' && !p.gonderdi, 'Şimdi gönderilemez');
-    const eksikler = oda.set.sorular.filter(s => !tamam(p.cevaplar[s.id])).map(s => s.id);
-    if (eksikler.length) throw Object.assign(new Error('Eksik sorular var'), { eksikler });
     p.gonderdi = true;
     for (const c of Object.values(p.cevaplar)) c.kilitli = true;
     if (oda.oyuncular.every(p => p.gonderdi)) ac(oda);
@@ -137,6 +141,10 @@ export function gorunum(oda, oyuncuId, simdi = Date.now()) {
       if (oda.evre === 'lobi' || (oda.mod === 'kahoot' && i > oda.sira)) return [];
       const c = ben.cevaplar[s.id];
       const soru = { id: s.id, sira: i, etiket: s.etiket, metin: s.metin, siklar: [...s.siklar], gorsel: s.gorsel, benim: c ? { sik: c.sik, guven: c.guven, neden: c.neden, kilitli: c.kilitli } : null, acik: acildi(oda, i) };
+      if (!soru.acik && oda.mod === 'serbest' && c?.kilitli) {
+        soru.dogru = s.dogru ?? null;
+        if (oda.set.aciklamalari_goster !== false) soru.aciklama = s.aciklama ?? null;
+      }
       if (soru.acik) {
         soru.dogru = s.dogru ?? null;
         if (oda.set.aciklamalari_goster !== false) soru.aciklama = s.aciklama ?? null;

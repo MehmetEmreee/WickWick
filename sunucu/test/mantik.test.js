@@ -84,10 +84,9 @@ test('Puan formülü, sınırlar ve anahtarsız soru', () => {
   assert.equal(puan({}, { sik: 'A', an: 0 },30000,0),0);
   assert.equal(puan(s,null,30000,0),0);
 });
-test('Serbest: eksikler, taslak, kilit ve herkes gönderince açılış', () => {
+test('Serbest: boş sorularla gönderme, taslak, kilit ve herkes gönderince açılış', () => {
   const { oda, p, diger } = kur('serbest');
   islem(oda, p, { tur: 'taslak', soruId: 'Q1', sik: 'B', guven: null }, 2000);
-  assert.throws(() => islem(oda, p, { tur: 'gonder' }), e => { assert.deepEqual(e.eksikler,['Q1','Q2']); return true; });
   for (const kisi of [p,diger]) {
     cevap(oda,kisi,'Q1','taslak'); cevap(oda,kisi,'Q2','taslak','A');
     islem(oda,kisi,{ tur: 'gonder' },3000);
@@ -97,23 +96,79 @@ test('Serbest: eksikler, taslak, kilit ve herkes gönderince açılış', () => 
   assert.equal(gorunum(oda,p.id).oyuncular[0].dogruSayisi,2);
   assert.equal(gorunum(oda,p.id).oyuncular[0].puan,0);
 });
-test('Serbest süre dolunca tam taslak kilitlenir, eksik cevap boş sayılır', () => {
+test('Kahoot: güven isteğe bağlı; şıklı cevap güvensiz de sayılır ve açılışta görünür', () => {
+  const { oda, p, diger } = kur();
+  islem(oda,p,{tur:'kilitle',soruId:'Q1',sik:'B',guven:null},2000);
+  assert.equal(p.cevaplar.Q1.guven,null);
+  islem(oda,diger,{tur:'kilitle',soruId:'Q1',sik:'A',guven:2},3000);
+  assert.equal(oda.evre,'acik');
+  const g = gorunum(oda,p.id);
+  assert.deepEqual(g.sorular[0].cevaplar.map(c=>[c.sik,c.guven]),[['B',null],['A',2]]);
+  assert.equal(g.oyuncular[0].dogruSayisi,1);
+  assert.equal(g.oyuncular[0].isaretli,1);
+  assert.equal(g.sorular[0].benim.guven,null);
+});
+test('Kahoot: boş kilit geçerli, 0 puan; herkes kilitleyince soru açılır', () => {
+  const { oda, p, diger } = kur();
+  islem(oda,p,{tur:'kilitle',soruId:'Q1',sik:null,guven:3},2000);
+  assert.equal(p.cevaplar.Q1.guven,null);
+  assert.equal(p.cevaplar.Q1.puan,0);
+  assert.equal(oda.evre,'soru');
+  islem(oda,diger,{tur:'kilitle',soruId:'Q1',sik:null,guven:null},3000);
+  assert.equal(oda.evre,'acik');
+  const g = gorunum(oda,p.id);
+  assert.equal(g.sorular[0].cevaplar[0].sik,null);
+  assert.equal(g.sorular[0].benim.kilitli,true);
+  assert.equal(g.oyuncular[0].puan,0);
+  assert.equal(g.oyuncular[0].isaretli,0);
+});
+test('Serbest: boş sorularla gönderme kabul edilir; şıklı güvensiz cevap sayılır', () => {
+  const { oda, p, diger } = kur('serbest');
+  islem(oda,p,{tur:'taslak',soruId:'Q1',sik:'B',guven:null},2000);
+  assert.equal(gorunum(oda,p.id).oyuncular[0].isaretli,1);
+  islem(oda,p,{tur:'gonder'},3000);
+  assert.equal(p.gonderdi,true);
+  islem(oda,diger,{tur:'gonder'},3000);
+  assert.equal(oda.evre,'bitti');
+  const g = gorunum(oda,p.id);
+  assert.equal(g.oyuncular[0].dogruSayisi,1);
+  assert.equal(g.sorular[0].cevaplar[0].sik,'B');
+  assert.equal(g.sorular[0].cevaplar[0].guven,null);
+  assert.equal(g.sorular[1].cevaplar[0].sik,null);
+  assert.equal(g.oyuncular[1].dogruSayisi,0);
+});
+test('Serbest: kontrol soruyu kilitler, doğruyu yalnız o oyuncuya açar', () => {
+  const { oda, p, diger } = kur('serbest');
+  cevap(oda, p, 'Q1', 'taslak', 'A');
+  islem(oda, p, { tur: 'kontrol', soruId: 'Q1' }, 2500);
+  const g = gorunum(oda, p.id).sorular;
+  assert.deepEqual([g[0].dogru, g[0].aciklama, g[0].benim.kilitli, g[0].acik, g[0].cevaplar], ['B', 'GİZLİ-AÇIKLAMA-1', true, false, undefined]);
+  assert.equal(g[1].dogru, undefined);
+  gizliYok(gorunum(oda, diger.id));
+  assert.throws(() => cevap(oda, p, 'Q1', 'taslak', 'B'), /kilitli/);
+  islem(oda, p, { tur: 'kontrol', soruId: 'Q2' }, 2600); // şıksız: boş kilitlenir
+  assert.deepEqual([p.cevaplar.Q2.sik, p.cevaplar.Q2.kilitli], [null, true]);
+  assert.throws(() => islem(oda, p, { tur: 'kontrol', soruId: 'YOK' }, 2700), /soruId/);
+});
+
+test('Serbest süre dolunca taslaklar kilitlenir, şıksız cevap boş sayılır', () => {
   const { oda, p } = kur('serbest');
   oda.bitis = 5000; oda.sureMs = 4000;
   cevap(oda,p,'Q1','taslak');
-  islem(oda,p,{ tur:'taslak', soruId:'Q2', sik:'A', guven:null, neden:'eksik' },3000);
+  islem(oda,p,{ tur:'taslak', soruId:'Q2', sik:null, guven:2, neden:'eksik' },3000);
   assert.equal(sureyiIsle(oda,5000),true);
   const g = gorunum(oda,p.id);
   assert.equal(g.evre,'bitti');
   assert.equal(g.sorular[0].benim.kilitli,true);
   assert.equal(g.sorular[1].cevaplar[0].sik,null);
-  assert.equal(g.sorular[1].benim.sik,'A'); // Kendi taslağı yine kendisine gider.
+  assert.equal(g.sorular[1].benim.sik,null); // Kendi taslağı yine kendisine gider.
+  assert.equal(g.sorular[1].benim.guven,2);
   assert.equal(g.oyuncular[0].dogruSayisi,1);
 });
 test('Girdi sınırları, tek satır neden, tekrar kilitleme ve yetki', () => {
   const { oda, p, diger } = kur();
   assert.throws(() => islem(oda,diger,{ tur:'simdiAc' },2000),/kurucu/);
-  for (const ek of [{sik:'E',guven:1},{sik:'A',guven:4},{sik:'A',guven:1.5},{sik:null,guven:1}]) assert.throws(() => islem(oda,p,{tur:'kilitle',soruId:'Q1',...ek},2000));
+  for (const ek of [{sik:'E',guven:1},{sik:'A',guven:4},{sik:'A',guven:1.5},{sik:'A'},{sik:'A',guven:0}]) assert.throws(() => islem(oda,p,{tur:'kilitle',soruId:'Q1',...ek},2000));
   islem(oda,p,{tur:'kilitle',soruId:'Q1',sik:'A',guven:1,neden:'a\nb\r\n'+'c'.repeat(150)},2000);
   assert.equal(p.cevaplar.Q1.neden.length,120);
   assert.ok(!/[\r\n]/.test(p.cevaplar.Q1.neden));

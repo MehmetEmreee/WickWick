@@ -62,7 +62,7 @@ Oda kurulurken mod seçilir.
 
 - Lobi: katılanlar listelenir. Kurucu "Başlat" der (en az 1 kişi yeter).
 - `soru`: herkes aynı soruyu görür. Bitiş anı = başlangıç + süre (sorunun `sure` alanı, yoksa odanın `soruSuresi`).
-  Kişi şık + güven seçer, isterse neden yazar, "Kilitle" der. Kilitlenen cevap değişmez. Kilitleme anı sunucu saatiyle kaydedilir.
+  Kişi şık seçer, isterse güven (1–3) ve neden yazar (soruyu boş da kilitleyebilir, 0 puan), "Kilitle" der. Kilitlenen cevap değişmez. Kilitleme anı sunucu saatiyle kaydedilir.
 - Odadaki herkes kilitleyince ya da süre dolunca sunucu kendiliğinden `acik` evresine geçer. Süre dolduğunda kilitlememiş kişinin cevabı boştur.
 - `acik`: o sorunun doğru şıkkı, açıklaması, herkesin şıkkı/güveni/nedeni, o sorudan alınan puan ve puan tablosu görünür.
 - Sıradaki soruya kurucu geçirir ("Sıradaki soru"). Kurucu bağlı değilse düğme herkese açılır. Son sorudan sonra `bitti`.
@@ -75,15 +75,16 @@ Oda kurulurken mod seçilir.
 - Lobi: kurucu "Başlat" der.
 - `cozum`: herkes kendi hızında, ileri-geri gezerek çözer. Her işaretleme sunucuya taslak olarak kaydedilir
   (yenileyince kaldığı yerden devam, başkaları için "4/7 işaretledi" bilgisi).
-  "Gönder" bütün sorular tamamsa (şık + güven) kabul edilir; cevaplar kilitlenir.
+  "Cevabı gör" o sorudaki cevabı kilitler ve doğru şık/açıklamayı yalnız o kişiye açar.
+  "Gönder" boş sorular olsa da kabul edilir; cevaplar kilitlenir.
 - Toplam süre isteğe bağlıdır (`toplamSure` dakika, 0 = süresiz). Süre dolunca göndermemiş kişinin o anki taslağı kilitlenir,
-  eksik soruları boş sayılır.
+  şıksız sorular boş sayılır.
 - Herkes gönderince, süre dolunca ya da kurucu "Şimdi aç" deyince `bitti`.
 - `cozum` sırasında yeni kişi katılabilir. Puan yok; sıralama doğru sayısına göre.
 
 Ortak kurallar:
 - Oda en fazla 4 kişi. Aynı ad ikinci kez alınamaz. `bitti` evresinde katılım kapalıdır.
-- "Tamam" bir cevap: şık (A–E) ve güven (1–3) birlikte. Neden en çok 120 karakter, tek satır.
+- "Tamam" bir cevap: şık (A–E) seçilmiş olmasıdır; güven (1–3) isteğe bağlıdır. Neden en çok 120 karakter, tek satır.
 - Oda kodu 5 haneli rakam, benzersiz.
 - Odalar `veri/odalar.json` dosyasında saklanır (her değişiklikte gecikmeli, atomik yazma) ve sunucu yeniden başlayınca geri yüklenir.
   90 günden eski odalar açılışta silinir. Sunucu yeniden başladığında süren zamanlayıcılar bitiş anından yeniden kurulur.
@@ -94,7 +95,7 @@ Sunucu her bağlantıya **o kişiye özel** bir görünüm üretir. Aşağıdaki
 hiçbir uçtan (HTTP ya da WS) gönderilmez:
 
 - Başkasının şıkkı, güveni, nedeni. (Yalnız "kilitledi / kaç soru işaretledi" bilgisi gider.)
-- `dogru` ve `aciklama` alanları.
+- `dogru` ve `aciklama` alanları (serbestte `kontrol` ile kilitlenen soru, yalnız kilitleyen kişiye açılır).
 
 Açılış anı: Kahoot'ta soru bazında (`acik(i)` evresine geçince yalnız i. ve önceki sorular), serbestte `bitti` evresi.
 `aciklamalari_goster: false` ise `aciklama` hiçbir zaman gönderilmez. Kişinin kendi cevabı kendisine her zaman gider.
@@ -162,16 +163,17 @@ Bağlantı: `ws://<host>/ws?kod=..&oyuncuId=..&anahtar=..`. Yanlış kimlikte `{
 | `tur` | Alanlar | Kim / ne zaman |
 | --- | --- | --- |
 | `baslat` | — | kurucu, lobi |
-| `kilitle` | `soruId, sik, guven, neden` | kahoot, `soru` evresi, o anki soru, bir kez |
+| `kilitle` | `soruId, sik, guven, neden` (sik/guven `null` olabilir; sik `null` boş kilittir) | kahoot, `soru` evresi, o anki soru, bir kez |
 | `taslak` | `soruId, sik, guven, neden` (sik/guven `null` olabilir) | serbest, `cozum`, göndermemişse |
+| `kontrol` | `soruId` | serbest, `cozum`, göndermemişse; o cevabı kilitler, `dogru`/`aciklama` yalnız kendisine gider (`acik: false`, `cevaplar` yok); kilitli soruya `taslak` reddedilir |
 | `konum` | `sira` | serbest; kişinin baktığı soru sırası (yenileyince dönmek için) |
-| `gonder` | — | serbest, `cozum`; eksik varsa `hata` + `eksikler: [soruId..]` |
+| `gonder` | — | serbest, `cozum`; boş sorular olsa da kabul edilir |
 | `sonraki` | — | kahoot, `acik`; kurucu, kurucu bağlı değilse herkes |
 | `simdiAc` | — | serbest, `cozum`; kurucu |
 
 Sunucu → istemci:
 
-- `{ tur: "hata", ileti, eksikler? }` — Türkçe ileti.
+- `{ tur: "hata", ileti }` — Türkçe ileti.
 - `{ tur: "durum", durum }` — her değişiklikte o kişiye özel tam görünüm:
 
 ```js
@@ -213,19 +215,18 @@ Mobil öncelikli, tek sayfa. `prefers-color-scheme` ile açık ve koyu tema. Dok
 `visibilitychange` ile sayfa öne gelince hemen dener. Kimlikler `localStorage`'da: oda başına `{ kod, oyuncuId, anahtar, ad }` ve son kullanılan ad.
 
 Ekranlar:
-1. **Ana sayfa**: "Yeni test", "Koda katıl" (kod kutusu), "Geçmiş testler" (o cihazın odaları; başlık, tarih, kişiler ve skorları; dokununca oda açılır).
-2. **Yeni test**: JSON yapıştırma alanı + `.json` dosya seçme; doğrulama hataları liste halinde; mod seçimi (Kahoot / Kendi hızında);
+1. **Ana sayfa**: varsa bitmemiş ilk oda için başlık, mod ve oda bağlantısıyla "Devam et" kartı (geçmiş yüklenirken yeri ayrılır); "Koda katıl" (kod kutusu), ikincil "Yeni test", "Geçmiş testler" (o cihazın odaları; başlık, tarih, kişiler ve skorları; dokununca oda açılır).
+2. **Yeni test**: JSON yapıştırma alanı + `.json` dosya seçme; metin değişimi durduktan yaklaşık 600 ms sonra veya dosya seçilince otomatik doğrulama (boş alanda sonuç yok, eski yanıtlar yok sayılır), hatalar liste halinde; mod seçimi (Kahoot / Kendi hızında);
    soru süresi (20/30/45/60/90 sn) ya da toplam süre (süresiz/10/20/30/45 dk); kurucunun adı; "Odayı kur".
 3. **Katıl**: linkten ya da koddan gelen kişi yalnız adını yazar.
-4. **Lobi**: büyük oda kodu, link, "Linki kopyala", "WhatsApp ile paylaş" (`https://wa.me/?text=`), katılanlar, kurucuda "Başlat".
+4. **Lobi**: büyük oda kodu, katılanlar, kurucuda "Başlat"; ardından yan yana "Linki kopyala" ve "WhatsApp ile paylaş" (`https://wa.me/?text=`); ham link gösterilmez.
    Link `location.origin + "/#/oda/KOD"`.
 5. **Kahoot soru**: üstte "3/7", geri sayım çubuğu ve saniye; soru metni, varsa görsel (sorunun altında); büyük şık düğmeleri (A–E);
-   güven 1–3; neden satırı; "Kilitle". Kilitledikten sonra bekleme: "Ali: kilitledi ✓ / düşünüyor…".
-6. **Kahoot açılış**: doğru şık, herkesin şıkkı/güveni/nedeni yan yana, ✓/✗, o sorudan puan, açıklama, puan tablosu, "Sıradaki soru".
-7. **Serbest çözüm**: tek soru, "5/7", ileri/geri, soru noktaları; varsa toplam geri sayım; "Gönder" eksik varsa eksik soruları listeler
-   (dokununca o soruya gider). Gönderdikten sonra bekleme: "Ali: 4/7 işaretledi" / "Ali: bitirdi ✓"; kurucuda "Şimdi aç".
+   güven 1–3 (isteğe bağlı); "+ Not ekle" ile açılan neden alanı (mevcut not açıktır, kilitli ve boşsa gizlidir); yapışkan alt çubukta "Kilitle" ve "Boş bırak". Durum küçük rozetlerle: "Ali ✓ / Ayşe …"; bağlı değil bilgisi korunur.
+6. **Kahoot açılış**: şıkların altında seçenlerin adı, varsa güveni, ✓/✗ ve doğru cevapta +puan; şıkların hemen altında açıklama; ayrı kısa satırlarda yalnız yazılmış nedenler ve boş bırakanlar; puan tablosu, yapışkan alt çubukta "Sıradaki soru" / "Sonuçları göster".
+7. **Serbest çözüm**: tek soru; "5/7 ▾" düğmesiyle açılıp kapanan, başlangıçta kapalı soru noktaları (soru seçilince kapanır); varsa toplam geri sayım; yapışkan alt çubukta "Önceki" ve birincil "Sonraki ›", son soruda birincil "Gönder"; diğer sorularda sayfa sonunda ikincil "Gönder". "Gönder" boş sorular olsa da kabul edilir. Oyuncu durumu küçük rozetlerle "Ali 4/7" / "Ali ✓"; kurucuda gönderdikten sonra "Şimdi aç".
 8. **Sonuç (bitti)**: skorlar (Kahoot'ta puan + doğru sayısı, serbestte doğru sayısı; `puanli` değilse skor yok);
-   her soru için herkesin şıkkı/güveni/nedeni yan yana, doğru şık, ✓/✗, açıklama.
+   her şıkta seçenlerin adı, varsa güveni, ✓/✗ ve Kahoot’ta doğru cevapta +puan; kendi adında "(sen)"; şıkların hemen altında açıklama, ardından yalnız yazılmış nedenler ve "Boş: Ali, Can" satırı; ayrı oyuncu kartları yok.
    Vurgular: **"Hepiniz yanlış"** (2 kişiyse "İkiniz de yanlış"; cevap veren herkes yanlışsa) ve **"emin ama yanlış"** (güven 3 + yanlış).
    "Sonuçları kopyala".
 

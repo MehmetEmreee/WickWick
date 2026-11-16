@@ -1,5 +1,5 @@
 // Oda: katılma, WebSocket bağlantısı ve durum nesnesinden türeyen ekranlar.
-import { el, depo, api, hataMetni, matDugum, gorselKutusu, kopyaDugmesi, HARF } from './ortak.js';
+import { el, depo, api, hataMetni, matDugum, gorselKutusu, kopyaDugmesi, secenekler, HARF } from './ortak.js';
 import { sonucMetni } from './sonucMetni.js';
 
 const GUVEN = { 1: 'Tahmin', 2: 'Kısmen', 3: 'Eminim' };
@@ -167,7 +167,7 @@ const dakikaSaniye = (k) => {
 
 // Satır listesi; yalnız içerik değişince yeniden yazılır.
 function canliListe(sinif) {
-  const ul = el('ul', { class: sinif });
+  const ul = el('ul', { class: sinif, 'aria-label': sinif === 'oyuncu-durum' ? 'Oyuncu durumu' : 'Katılanlar' });
   let imza = '';
   return {
     ul,
@@ -199,20 +199,28 @@ function soruBasi(s) {
 function cevapSecici(s, sec, kapali, degisti) {
   const siklar = s.siklar.map((m, j) => el('button', {
     type: 'button', class: `sik renk-${HARF[j]}`,
-    onclick() { if (kapali()) return; sec.sik = HARF[j]; ciz(); degisti('sik'); },
+    onclick() { if (kapali()) return; sec.sik = sec.sik === HARF[j] ? null : HARF[j]; ciz(); degisti('sik'); },
   }, el('span', { class: 'rozet', text: HARF[j] }), matDugum('span', 'sik-metin', m)));
   const guvenler = [1, 2, 3].map((g) => el('button', {
     type: 'button', class: 'guven',
-    onclick() { if (kapali()) return; sec.guven = g; ciz(); degisti('guven'); },
+    onclick() { if (kapali()) return; sec.guven = sec.guven === g ? null : g; ciz(); degisti('guven'); },
   }, el('b', { text: String(g) }), el('span', { text: GUVEN[g] })));
+  let notAcik = !!sec.neden;
+  const notEkle = el('button', {
+    type: 'button', class: 'metin-dugme', text: '+ Not ekle',
+    onclick() { notAcik = true; ciz(); neden.focus(); },
+  });
   const neden = el('input', {
     type: 'text', maxLength: 120, value: sec.neden || '', placeholder: 'Neden? (isteğe bağlı)',
     autocomplete: 'off', enterKeyHint: 'done', 'aria-label': 'Neden',
     oninput() { sec.neden = neden.value; degisti('neden'); },
     onkeydown(e) { if (e.key === 'Enter') { e.preventDefault(); neden.blur(); } },
   });
+  const nedenAlan = el('label', { class: 'alan' }, el('span', { class: 'gorunmez', text: 'Neden' }), neden);
   function ciz() {
     const k = kapali();
+    notEkle.hidden = k || notAcik || !!sec.neden;
+    nedenAlan.hidden = k ? !sec.neden : !notAcik && !sec.neden;
     siklar.forEach((b, j) => {
       const on = sec.sik === HARF[j];
       b.classList.toggle('secili', on);
@@ -231,10 +239,10 @@ function cevapSecici(s, sec, kapali, degisti) {
   ciz();
   const dugum = el('div', { class: 'secici' },
     el('div', { class: 'siklar' }, siklar),
-    el('p', { class: 'alt-baslik', text: 'Ne kadar eminsin?' }),
+    el('p', { class: 'alt-baslik', text: 'Ne kadar eminsin? (isteğe bağlı)' }),
     el('div', { class: 'guvenler' }, guvenler),
-    el('label', { class: 'alan' }, el('span', { class: 'gorunmez', text: 'Neden' }), neden));
-  return { dugum, ciz, neden };
+    notEkle, nedenAlan);
+  return { dugum, ciz, neden, siklar };
 }
 
 function skorTablosu(d, payda) {
@@ -264,40 +272,33 @@ function cevapBlogu(s, d) {
   const verenler = cevaplar.filter((c) => c.sik);
   const hepsiYanlis = !!s.dogru && verenler.length >= 2 && verenler.every((c) => c.dogruMu === false);
   const puanGoster = d.mod === 'kahoot' && d.puanli;
+  const ad = (c) => (adlar.get(c.oyuncuId) ?? '?') + (c.oyuncuId === d.ben.id ? ' (sen)' : '');
 
   const siklar = el('ol', { class: 'sik-sonuclar' }, s.siklar.map((m, j) => {
     const h = HARF[j];
     const dogru = s.dogru === h;
-    const kimler = cevaplar.filter((c) => c.sik === h).map((c) => adlar.get(c.oyuncuId) ?? '?').join(', ');
-    return el('li', { class: `sik-sonuc renk-${h}${dogru ? ' dogru' : ''}` },
+    const yanlis = !!s.dogru && !dogru && cevaplar.some((c) => c.oyuncuId === d.ben.id && c.sik === h);
+    const kimler = cevaplar.filter((c) => c.sik === h).map((c) => el('span', {},
+      `${ad(c)}${c.guven ? ` · güven ${c.guven}` : ''}${c.dogruMu === true ? ' ✓' : c.dogruMu === false ? ' ✗' : ''}${puanGoster && c.dogruMu === true ? ` +${c.puan || 0}` : ''}`,
+      c.guven === 3 && c.dogruMu === false && el('span', { class: 'etiket-uyari', text: 'emin ama yanlış' })));
+    return el('li', { class: `sik-sonuc renk-${h}${dogru ? ' dogru' : yanlis ? ' yanlis' : ''}` },
       el('span', { class: 'rozet', text: h }),
       el('div', { class: 'ss-govde' },
         matDugum('div', 'ss-metin', m),
-        kimler && el('div', { class: 'ss-kimler', text: kimler })),
-      dogru && el('span', { class: 'ss-isaret', text: '✓ Doğru' }));
+        kimler.length > 0 && el('div', { class: 'ss-kimler' }, kimler)),
+      (dogru || yanlis) && el('span', { class: 'ss-isaret', text: dogru ? '✓ Doğru' : '✗ Yanlış' }));
   }));
 
-  const kartlar = el('ul', { class: 'cevaplar' }, cevaplar.map((c) => {
-    const isaret = c.dogruMu === true ? '✓' : c.dogruMu === false ? '✗' : '';
-    const sag = [isaret, puanGoster && c.dogruMu === true ? `+${c.puan || 0}` : ''].filter(Boolean).join(' ');
-    const sinif = ['cevap', c.oyuncuId === d.ben.id && 'ben', c.dogruMu === true && 'dogru', c.dogruMu === false && 'yanlis']
-      .filter(Boolean).join(' ');
-    return el('li', { class: sinif },
-      el('div', { class: 'cevap-ust' },
-        el('span', { class: 'cevap-ad', text: (adlar.get(c.oyuncuId) ?? '?') + (c.oyuncuId === d.ben.id ? ' (sen)' : '') }),
-        sag && el('span', { class: 'cevap-isaret', text: sag })),
-      el('div', { class: 'cevap-sec', text: c.sik ? `${c.sik} · güven ${c.guven ?? '–'}` : 'Boş' }),
-      c.guven === 3 && c.dogruMu === false && el('span', { class: 'etiket-uyari', text: 'emin ama yanlış' }),
-      c.neden && el('p', { class: 'cevap-neden', text: c.neden }));
-  }));
+  const boslar = cevaplar.filter((c) => !c.sik).map(ad);
+  const nedenler = cevaplar.filter((c) => c.neden).map((c) => el('p', { class: 'cevap-neden', text: `${ad(c)}: ${c.neden}` }));
 
   return el('section', { class: 'kart soru-sonuc' },
     ...soruBasi(s),
     hepsiYanlis && el('p', { class: 'vurgu-kutu', text: verenler.length === 2 ? 'İkiniz de yanlış' : 'Hepiniz yanlış' }),
     siklar,
-    el('h3', { class: 'alt-baslik', text: 'Cevaplar' }),
-    kartlar,
-    s.aciklama && el('div', { class: 'aciklama' }, el('h3', { text: 'Açıklama' }), matDugum('div', 'aciklama-metin', s.aciklama)));
+    s.aciklama && el('div', { class: 'aciklama' }, el('h3', { text: 'Açıklama' }), matDugum('div', 'aciklama-metin', s.aciklama)),
+    boslar.length > 0 && el('p', { class: 'not', text: `Boş: ${boslar.join(', ')}` }),
+    nedenler);
 }
 
 function hataKutusu() {
@@ -371,9 +372,8 @@ function yerelAdres() {
 function lobiEkrani(d) {
   let link = `${location.origin}/#/oda/${d.kod}`;
   const paylasMetni = () => `${d.set.baslik} testine katıl: ${link}`;
-  const linkYazi = el('p', { class: 'link', text: link });
   const whatsapp = el('a', {
-    class: 'dugme', target: '_blank', rel: 'noopener', text: 'WhatsApp ile paylaş',
+    class: 'dugme', target: '_blank', rel: 'noopener', text: 'WhatsApp',
     href: `https://wa.me/?text=${encodeURIComponent(paylasMetni())}`,
   });
   // Mac'te localhost'tan açıldıysa telefonların açabileceği yerel ağ adresini kullan.
@@ -381,7 +381,6 @@ function lobiEkrani(d) {
     yerelAdres().then((adres) => {
       if (!adres) return;
       link = `${adres.replace(/\/+$/, '')}/#/oda/${d.kod}`;
-      linkYazi.textContent = link;
       whatsapp.href = `https://wa.me/?text=${encodeURIComponent(paylasMetni())}`;
     });
   }
@@ -411,13 +410,13 @@ function lobiEkrani(d) {
         el('div', { class: 'oda-kodu', text: d.kod }),
         el('h1', { class: 'lobi-baslik', text: d.set.baslik }),
         el('p', { class: 'not', text: [d.set.ders, `${d.set.soruSayisi} soru`, sureYazi].filter(Boolean).join(' · ') })),
+      el('section', {}, sayi, kisiler.ul),
+      baslat, bekle,
       el('section', { class: 'kart' },
-        linkYazi,
-        el('div', { class: 'yigin' },
+        el('div', { class: 'iki-dugme' },
           kopyaDugmesi('Linki kopyala', () => link),
           whatsapp)),
-      el('section', {}, sayi, kisiler.ul),
-      baslat, bekle, hata.p),
+      hata.p),
     guncelle,
     hata(m) { baslat.disabled = false; hata.yaz(m.ileti); },
   };
@@ -432,15 +431,17 @@ function kahootSoru(d) {
 
   const sayac = sayacOlustur(saniye, () => { sureBitti = true; ciz(); });
   const secici = cevapSecici(s, sec, kapali, ciz);
-  const kilitle = el('button', { type: 'button', class: 'dugme ana buyuk', text: 'Kilitle', onclick: kilitleBas });
+  const kilitle = el('button', { type: 'button', class: 'dugme ana buyuk', text: 'Kilitle', onclick: () => kilitleBas(false) });
+  const bosBirak = el('button', { type: 'button', class: 'dugme', text: 'Boş bırak', onclick: () => kilitleBas(true) });
   const bilgi = el('p', { class: 'not orta' });
   const hata = hataKutusu();
   const durumlar = canliListe('oyuncu-durum');
 
-  function kilitleBas() {
-    if (kapali() || !sec.sik || !sec.guven) return;
-    sonIleti = { tur: 'kilitle', soruId: s.id, sik: sec.sik, guven: sec.guven, neden: (sec.neden || '').trim().slice(0, 120) };
+  function kilitleBas(bos) {
+    if (kapali() || (!bos && !sec.sik)) return;
+    sonIleti = { tur: 'kilitle', soruId: s.id, sik: bos ? null : sec.sik, guven: bos ? null : sec.guven, neden: (sec.neden || '').trim().slice(0, 120) };
     if (!gonder(sonIleti)) { hata.yaz('Bağlantı yok; bağlanınca tekrar dene.'); return; }
+    if (bos) Object.assign(sec, { sik: null, guven: null });
     hata.yaz('');
     bekliyor = true;
     secici.neden.blur();
@@ -449,11 +450,12 @@ function kahootSoru(d) {
   function ciz() {
     secici.ciz();
     const k = kapali();
-    kilitle.disabled = k || !sec.sik || !sec.guven;
-    kilitle.textContent = kilitli || bekliyor ? 'Kilitlendi ✓' : 'Kilitle';
+    kilitle.disabled = k || !sec.sik;
+    kilitle.textContent = kilitli || bekliyor ? (sec.sik ? 'Kilitlendi ✓' : 'Boş bırakıldı ✓') : 'Kilitle';
+    bosBirak.disabled = k;
+    bosBirak.hidden = kilitli || bekliyor;
     bilgi.textContent = kilitli || bekliyor ? 'Diğerleri bekleniyor…'
-      : sureBitti ? 'Süre doldu, cevaplar açılıyor…'
-        : !sec.sik || !sec.guven ? 'Şık ve güven seç, sonra kilitle.' : '';
+      : sureBitti ? 'Süre doldu, cevaplar açılıyor…' : '';
   }
   function guncelle(y, ilk) {
     const ys = y.sorular.find((x) => x.sira === y.sira);
@@ -462,7 +464,7 @@ function kahootSoru(d) {
       Object.assign(sec, { sik: ys.benim.sik, guven: ys.benim.guven, neden: ys.benim.neden || '' });
     } else if (ilk && bekliyor && sonIleti) gonder(sonIleti); // kopukken gitmemiş olabilir
     sayac.ayarla(y.bitis, y.sureMs);
-    durumlar.ciz(y.oyuncular.map((p) => [`${p.ad}: ${p.kilitledi ? 'kilitledi ✓' : 'düşünüyor…'}${oyuncuEki(y, p)}`, p.kilitledi ? 'tamam' : '']));
+    durumlar.ciz(y.oyuncular.map((p) => [`${p.ad} ${p.kilitledi ? '✓' : '…'}${oyuncuEki(y, p)}`, p.kilitledi ? 'tamam' : '']));
     ciz();
   }
 
@@ -474,8 +476,8 @@ function kahootSoru(d) {
       sayac.iz),
     ...soruBasi(s),
     secici.dugum,
-    kilitle, bilgi, hata.p,
-    el('h3', { class: 'alt-baslik', text: 'Durum' }), durumlar.ul);
+    bilgi, hata.p, durumlar.ul,
+    el('div', { class: 'alt-eylemler iki-dugme' }, kilitle, bosBirak));
   return {
     dugum,
     takildi: () => guncelle(d, false),
@@ -517,7 +519,8 @@ function kahootAcik(d) {
         el('span', { class: 'not', text: 'Cevaplar açıldı' })),
       cevapBlogu(s, d),
       d.puanli && el('section', {}, el('h2', { text: 'Puan tablosu' }), tablo),
-      sonraki, bekle, hata.p),
+      bekle, hata.p,
+      el('div', { class: 'alt-eylemler' }, sonraki)),
     guncelle,
     hata(m) { sonraki.disabled = false; hata.yaz(m.ileti); },
   };
@@ -529,24 +532,44 @@ function serbestCozum(d) {
   const n = sorular.length;
   const yerel = new Map(sorular.map((s) => [s.id, { sik: s.benim?.sik ?? null, guven: s.benim?.guven ?? null, neden: s.benim?.neden ?? '' }]));
   let i = Math.min(Math.max(Number(d.ben.konum) || 0, 0), n - 1);
-  let sureBitti = false, gonderiliyor = false, eksikAcik = false;
-  let nedenZaman = null, nedenId = null, secici = null;
+  let sureBitti = false, gonderiliyor = false;
+  let nedenZaman = null, nedenId = null, secici = null, kontrolD = null;
   const kapali = () => sureBitti || gonderiliyor;
-  const tamamMi = (c) => !!(c.sik && c.guven);
+  const tamamMi = (c) => !!c.sik;
+  const kilitliler = new Map(); // soruId -> { dogru, aciklama } ("Cevabı gör" sonrası)
+  const istenen = new Set(); // kontrol gönderildi, kilit henüz gelmedi
+  // Sunucudan gelen kilitleri işler; görüntülenen soru yeni kilitlendiyse true.
+  function kilitIsle(y) {
+    let simdiki = false;
+    for (const ys of y.sorular) {
+      if (!ys.benim?.kilitli || kilitliler.has(ys.id) || !yerel.has(ys.id)) continue;
+      kilitliler.set(ys.id, { dogru: ys.dogru ?? null, aciklama: ys.aciklama ?? null });
+      istenen.delete(ys.id);
+      Object.assign(yerel.get(ys.id), { sik: ys.benim.sik ?? null, guven: ys.benim.guven ?? null, neden: ys.benim.neden || '' });
+      if (ys.id === sorular[i]?.id) simdiki = true;
+    }
+    return simdiki;
+  }
 
   const sayac = sayacOlustur(dakikaSaniye, () => { sureBitti = true; ciz(); });
-  const siraYazi = el('span', { class: 'sira-yazi' });
-  const noktalar = sorular.map((s, j) => el('button', { type: 'button', class: 'nokta', text: String(j + 1), onclick: () => git(j) }));
+  const siraYazi = el('button', {
+    type: 'button', class: 'sira-yazi metin-dugme', 'aria-expanded': 'false',
+    onclick() { soruGezgini.hidden = !soruGezgini.hidden; ciz(); },
+  });
+  const noktalar = sorular.map((s, j) => el('button', { type: 'button', class: 'nokta', text: String(j + 1), onclick() { soruGezgini.hidden = true; git(j); ciz(); siraYazi.focus(); } }));
+  const soruGezgini = el('nav', { class: 'noktalar', 'aria-label': 'Sorular', hidden: true }, noktalar);
   const soruAlani = el('div', { class: 'soru-alani' });
   const onceki = el('button', { type: 'button', class: 'dugme', text: '‹ Önceki', onclick: () => git(i - 1) });
-  const sonrakiD = el('button', { type: 'button', class: 'dugme', text: 'Sonraki ›', onclick: () => git(i + 1) });
-  const gonderD = el('button', { type: 'button', class: 'dugme ana buyuk', text: 'Gönder', onclick: gonderBas });
-  const eksikAlani = el('div', { class: 'eksik-alani' });
+  const sonrakiD = el('button', { type: 'button', class: 'dugme ana buyuk', text: 'Sonraki ›', onclick: () => git(i + 1) });
+  const gonderD = el('button', { type: 'button', class: 'dugme', text: 'Gönder', onclick: gonderBas });
+  const altEylemler = el('div', { class: 'alt-eylemler iki-dugme' }, onceki, sonrakiD);
+  const gonderAlani = el('div');
   const bilgi = el('p', { class: 'not orta', hidden: true });
   const hata = hataKutusu();
   const durumlar = canliListe('oyuncu-durum');
 
   function taslakGonder(id) {
+    if (kilitliler.has(id)) return;
     const c = yerel.get(id);
     gonder({ tur: 'taslak', soruId: id, sik: c.sik, guven: c.guven, neden: c.neden.trim().slice(0, 120) });
   }
@@ -556,10 +579,35 @@ function serbestCozum(d) {
     nedenZaman = null;
     taslakGonder(nedenId);
   }
+  function kontrolBas(id) {
+    if (kapali() || kilitliler.has(id) || istenen.has(id)) return;
+    nedenBosalt();
+    if (!gonder({ tur: 'kontrol', soruId: id })) { hata.yaz('Bağlantı yok; bağlanınca tekrar dene.'); return; }
+    hata.yaz('');
+    istenen.add(id);
+    ciz();
+  }
+  // Kilitli soru: doğru şık ✓, yanlış seçimim ✗; altında sonuç satırı ve varsa açıklama.
+  function kontrolSonucu(s, c, k) {
+    secici.siklar.forEach((b, j) => {
+      const dogru = k.dogru === HARF[j], yanlis = !!k.dogru && !dogru && c.sik === HARF[j];
+      if (!dogru && !yanlis) return;
+      b.classList.add(dogru ? 'dogru-sik' : 'yanlis-sik');
+      b.append(el('span', { class: 'sik-isaret', text: dogru ? '✓' : '✗' }));
+    });
+    const yazi = !k.dogru ? (c.sik ? 'Cevabın kilitlendi.' : 'Boş bıraktın; cevabın kilitlendi.')
+      : !c.sik ? `Boş bıraktın ✗ · doğru cevap: ${k.dogru}`
+        : c.sik === k.dogru ? 'Doğru ✓' : `Yanlış ✗ · doğru cevap: ${k.dogru}`;
+    return [
+      el('p', { class: `kontrol-yazi${k.dogru ? (c.sik === k.dogru ? ' basari' : ' hata') : ''}`, text: yazi }),
+      k.aciklama && el('div', { class: 'aciklama' }, el('h3', { text: 'Açıklama' }), matDugum('div', 'aciklama-metin', k.aciklama)),
+    ];
+  }
   function soruCiz() {
     const s = sorular[i];
     const c = yerel.get(s.id);
-    secici = cevapSecici(s, c, kapali, (alan) => {
+    const k = kilitliler.get(s.id);
+    secici = cevapSecici(s, c, () => kapali() || !!k || istenen.has(s.id), (alan) => {
       if (alan === 'neden') {
         nedenId = s.id;
         clearTimeout(nedenZaman);
@@ -569,7 +617,8 @@ function serbestCozum(d) {
         ciz();
       }
     });
-    soruAlani.replaceChildren(...soruBasi(s), secici.dugum);
+    kontrolD = k ? null : el('button', { type: 'button', class: 'dugme', text: 'Cevabı gör', onclick: () => kontrolBas(s.id) });
+    soruAlani.replaceChildren(...soruBasi(s), secici.dugum, ...(k ? kontrolSonucu(s, c, k) : [kontrolD]).filter(Boolean));
     ciz();
   }
   function git(j) {
@@ -580,64 +629,57 @@ function serbestCozum(d) {
     gonder({ tur: 'konum', sira: i });
     scrollTo(0, 0);
   }
-  function eksikler() { return sorular.filter((s) => !tamamMi(yerel.get(s.id))).map((s) => s.id); }
-  function eksikCiz(ids) {
-    if (!ids.length) {
-      eksikAlani.replaceChildren(el('p', { class: 'basari', text: 'Eksik kalmadı; gönderebilirsin.' }));
-      return;
-    }
-    eksikAlani.replaceChildren(
-      el('p', { class: 'hata', text: `${ids.length} soru eksik (şık ve güven birlikte gerekli):` }),
-      el('div', { class: 'eksikler' }, ids.map((id) => {
-        const j = sorular.findIndex((s) => s.id === id);
-        const c = yerel.get(id) || {};
-        const neyok = !c.sik && !c.guven ? 'şık ve güven yok' : !c.sik ? 'şık yok' : 'güven yok';
-        return el('button', { type: 'button', class: 'dugme eksik', text: `${j + 1}. soru (${id}): ${neyok}`, onclick: () => git(j) });
-      })));
-  }
   function gonderBas() {
     if (kapali()) return;
     nedenBosalt();
-    const ids = eksikler();
-    eksikAcik = true;
-    eksikCiz(ids);
-    if (ids.length) return;
-    if (!confirm('Cevaplar gönderilsin mi? Gönderdikten sonra değiştiremezsin.')) return;
+    const bos = sorular.filter((s) => !tamamMi(yerel.get(s.id))).length;
+    if (!confirm(`${bos ? `${bos} soru boş. Yine de gönderilsin mi?` : 'Cevaplar gönderilsin mi?'} Gönderdikten sonra değiştiremezsin.`)) return;
     if (!gonder({ tur: 'gonder' })) { hata.yaz('Bağlantı yok; bağlanınca tekrar dene.'); return; }
     hata.yaz('');
     gonderiliyor = true;
     ciz();
   }
   function ciz() {
-    siraYazi.textContent = `${i + 1}/${n}`;
+    siraYazi.textContent = `${i + 1}/${n} ${soruGezgini.hidden ? '▾' : '▴'}`;
+    siraYazi.setAttribute('aria-expanded', String(!soruGezgini.hidden));
     noktalar.forEach((b, j) => {
       const c = yerel.get(sorular[j].id);
-      b.className = `nokta${j === i ? ' simdiki' : ''}${tamamMi(c) ? ' tamam' : c.sik || c.guven ? ' yarim' : ''}`;
-      b.setAttribute('aria-label', `${j + 1}. soru${tamamMi(c) ? ', tamam' : ''}`);
+      const k = kilitliler.get(sorular[j].id);
+      const sonuc = k?.dogru ? (c.sik === k.dogru ? 'dogru' : 'yanlis') : '';
+      b.className = `nokta${j === i ? ' simdiki' : ''}${tamamMi(c) ? ' tamam' : ''}${sonuc ? ` nokta-${sonuc}` : ''}`;
+      b.textContent = `${j + 1}${sonuc === 'dogru' ? '✓' : sonuc ? '✗' : ''}`;
+      b.setAttribute('aria-label', `${j + 1}. soru${sonuc ? `, ${sonuc === 'dogru' ? 'doğru' : 'yanlış'}` : tamamMi(c) ? ', tamam' : ''}`);
       if (j === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
     secici?.ciz();
+    if (kontrolD) kontrolD.disabled = kapali() || istenen.has(sorular[i].id);
     onceki.disabled = i === 0;
-    sonrakiD.disabled = i === n - 1;
+    const sonMu = i === n - 1;
+    sonrakiD.hidden = sonMu;
+    gonderD.className = sonMu ? 'dugme ana buyuk' : 'metin-dugme';
+    const hedef = sonMu ? altEylemler : gonderAlani;
+    if (gonderD.parentElement !== hedef) hedef.append(gonderD);
     gonderD.disabled = kapali();
     gonderD.textContent = gonderiliyor ? 'Gönderiliyor…' : 'Gönder';
     bilgi.hidden = !sureBitti;
     bilgi.textContent = sureBitti ? 'Süre doldu, sonuçlar açılıyor…' : '';
-    if (eksikAcik) eksikCiz(eksikler());
   }
   function guncelle(y, ilk) {
+    if (kilitIsle(y)) soruCiz(); else ciz();
     sayac.ayarla(y.bitis, y.sureMs);
     durumlar.ciz(y.oyuncular.filter((p) => p.id !== y.ben.id).map((p) => [
-      `${p.ad}: ${p.gonderdi ? 'bitirdi ✓' : `${p.isaretli ?? 0}/${n} işaretledi`}${oyuncuEki(y, p)}`, p.gonderdi ? 'tamam' : '']));
+      `${p.ad} ${p.gonderdi ? '✓' : `${p.isaretli ?? 0}/${n}`}${oyuncuEki(y, p)}`, p.gonderdi ? 'tamam' : '']));
     if (ilk) {
       // Yeniden bağlanınca sunucuya ulaşmamış taslakları gönder.
       for (const s of y.sorular) {
         const b = s.benim || {}, c = yerel.get(s.id);
-        if (c && (c.sik !== (b.sik ?? null) || c.guven !== (b.guven ?? null) || c.neden.trim() !== (b.neden || ''))) taslakGonder(s.id);
+        if (!kilitliler.has(s.id) && c && (c.sik !== (b.sik ?? null) || c.guven !== (b.guven ?? null) || c.neden.trim() !== (b.neden || ''))) taslakGonder(s.id);
       }
+      for (const id of istenen) gonder({ tur: 'kontrol', soruId: id });
       if (gonderiliyor) gonder({ tur: 'gonder' });
     }
   }
+  kilitIsle(d);
   soruCiz();
 
   return {
@@ -645,18 +687,15 @@ function serbestCozum(d) {
       el('div', { class: 'ust-cubuk' },
         el('div', { class: 'ust-satir' }, siraYazi, sayac.yazi),
         sayac.iz),
-      el('nav', { class: 'noktalar', 'aria-label': 'Sorular' }, noktalar),
-      soruAlani,
-      el('div', { class: 'iki-dugme' }, onceki, sonrakiD),
-      gonderD, bilgi, eksikAlani, hata.p,
-      el('h3', { class: 'alt-baslik', text: 'Diğerleri' }), durumlar.ul),
+      soruGezgini, soruAlani,
+      bilgi, hata.p, durumlar.ul, gonderAlani, altEylemler),
     takildi: () => guncelle(d, false),
     guncelle,
     kapat() { nedenBosalt(); sayac.kapat(); },
     hata(m) {
       gonderiliyor = false;
       hata.yaz(m.ileti);
-      if (Array.isArray(m.eksikler)) { eksikAcik = true; eksikCiz(m.eksikler); }
+      istenen.clear();
       ciz();
     },
   };
@@ -678,7 +717,7 @@ function serbestBekle(d) {
   function guncelle(y) {
     sayac.ayarla(y.bitis, y.sureMs);
     durumlar.ciz(y.oyuncular.map((p) => [
-      `${p.ad}: ${p.gonderdi ? 'bitirdi ✓' : `${p.isaretli ?? 0}/${n} işaretledi`}${oyuncuEki(y, p)}`, p.gonderdi ? 'tamam' : '']));
+      `${p.ad} ${p.gonderdi ? '✓' : `${p.isaretli ?? 0}/${n}`}${oyuncuEki(y, p)}`, p.gonderdi ? 'tamam' : '']));
     ac.hidden = !y.ben.kurucu;
   }
   return {
@@ -697,13 +736,22 @@ function serbestBekle(d) {
 // ---------------------------------------------------------------- Sonuç
 function sonucEkrani(d) {
   const sorular = [...d.sorular].sort((a, b) => a.sira - b.sira);
+  const yanlislar = sorular.filter((s) => s.dogru && s.cevaplar?.find((c) => c.oyuncuId === d.ben.id)?.sik !== s.dogru);
+  const liste = el('div');
+  function filtrele(yanlis) {
+    liste.replaceChildren(...(yanlis && !yanlislar.length
+      ? [el('p', { class: 'basari', text: 'Yanlış veya boş cevabın yok ✓' })]
+      : (yanlis ? yanlislar : sorular).map((s) => cevapBlogu(s, d))));
+  }
+  filtrele(false);
   return {
     dugum: el('div', { class: 'sonuc-ekrani' },
       el('h1', { text: 'Sonuçlar' }),
       el('p', { class: 'not', text: [d.set.baslik, d.set.ders].filter(Boolean).join(' · ') }),
       d.puanli && skorTablosu(d, d.set.soruSayisi),
       kopyaDugmesi('Sonuçları kopyala', () => sonucMetni(o?.durum || d), 'dugme ana buyuk'),
-      ...sorular.map((s) => cevapBlogu(s, d)),
+      d.puanli && secenekler('sonuc-filtre', [[false, 'Tümü'], [true, `Yanlışlarım (${yanlislar.length})`]], false, filtrele),
+      liste,
       el('a', { href: '#/', class: 'dugme', text: 'Ana sayfaya dön' })),
   };
 }

@@ -8,6 +8,7 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { odaKur, oyuncuEkle, islem, gorunum, asistanSonucu } from '../oda.js';
 import { depoAc } from '../depo.js';
+import { sonucMetni } from '../../public/sonucMetni.js';
 import { sunucuOlustur } from '../sunucu.js';
 
 const setUret = () => ({ surum:1, set_id:'asistan-test', baslik:'Asistan testi', sorular:[
@@ -185,4 +186,8 @@ test('MCP stdio + HTTP: örnek set yükleme, durum, bitmemiş sonuç, anahtarın
     const tekrar=(await m.cagir('tools/call',{name:'test_durumu',arguments:{}})).result;
     assert.equal(JSON.parse(tekrar.content[0].text).kod,oda.kod);
   } finally {if(m)await m.kapat();if(app)await app.kapat();await rm(dizin,{recursive:true,force:true});}
+});
+test('Sonuç metni: şıklı ama güvensiz cevap ve boş cevap',()=>{
+  const durum={set:{set_id:'x',baslik:'Y',soruSayisi:1},puanli:true,oyuncular:[{id:'1',ad:'Ali',dogruSayisi:1},{id:'2',ad:'Veli',dogruSayisi:0}],sorular:[{id:'S1',sira:0,cevaplar:[{oyuncuId:'1',sik:'B',guven:null,neden:''},{oyuncuId:'2',sik:null,guven:null,neden:''}]}]};
+  assert.equal(sonucMetni(durum),'[TEST SONUCU] x · Y\nKatılımcılar: Ali, Veli\nS1 | Ali: B | Veli: boş\nSkor | Ali: 1/1 | Veli: 0/1');
 });

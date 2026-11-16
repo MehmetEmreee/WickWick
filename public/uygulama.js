@@ -18,7 +18,6 @@ function yonlendir() {
   anaSayfa();
 }
 addEventListener('hashchange', yonlendir);
-yonlendir();
 
 // ---------------------------------------------------------------- Ana sayfa
 const MOD_ADI = { kahoot: 'Süreli', serbest: 'Kendi hızında' };
@@ -41,15 +40,16 @@ function anaSayfa() {
   }, kodKutu, el('button', { class: 'dugme ana', text: 'Katıl' }));
 
   const gecmis = el('div', { class: 'gecmis' });
+  const devam = el('div', { class: 'devam-alani', hidden: !depo.odalar().length });
   goster(
     el('header', { class: 'sayfa-baslik' },
-      el('h1', { text: 'Test Odası' }),
-      el('p', { class: 'not', text: 'Aynı testi telefonlardan birlikte çözün.' })),
-    el('a', { href: '#/yeni', class: 'dugme ana buyuk', text: 'Yeni test' }),
+      el('h1', { text: 'Test Odası' })),
+    devam,
     el('section', { class: 'kart' }, el('h2', { text: 'Koda katıl' }), form, hata),
+    el('a', { href: '#/yeni', class: 'dugme', text: 'Yeni test' }),
     el('section', {}, el('h2', { text: 'Geçmiş testler' }), gecmis),
   );
-  gecmisDoldur(gecmis);
+  gecmisDoldur(gecmis, devam);
 }
 
 function tarihYaz(t) {
@@ -58,14 +58,20 @@ function tarihYaz(t) {
   return d.toLocaleString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-async function gecmisDoldur(kutu) {
+async function gecmisDoldur(kutu, devam) {
   const odalar = depo.odalar();
   if (!odalar.length) { kutu.append(el('p', { class: 'not', text: 'Bu cihazda henüz test yok.' })); return; }
   kutu.append(el('p', { class: 'not', text: 'Yükleniyor…' }));
   const r = await api('/api/gecmis', { odalar: odalar.map(({ kod, oyuncuId, anahtar }) => ({ kod, oyuncuId, anahtar })) });
   if (!kutu.isConnected) return;
-  if (!r.ok) { kutu.replaceChildren(el('p', { class: 'hata', text: hataMetni(r.veri, 'Geçmiş alınamadı.') })); return; }
+  if (!r.ok) { devam.hidden = true; kutu.replaceChildren(el('p', { class: 'hata', text: hataMetni(r.veri, 'Geçmiş alınamadı.') })); return; }
   const liste = (r.veri.odalar || []).slice().sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+  const etkin = liste.find((o) => o.evre !== 'bitti');
+  devam.hidden = !etkin;
+  if (etkin) devam.replaceChildren(el('a', { href: `#/oda/${etkin.kod}`, class: 'kart devam-karti' },
+    el('h2', { text: 'Devam et' }),
+    el('strong', { text: etkin.baslik || etkin.kod }),
+    el('p', { class: 'not', text: MOD_ADI[etkin.mod] })));
   if (!liste.length) { kutu.replaceChildren(el('p', { class: 'not', text: 'Kayıtlı oda bulunamadı.' })); return; }
   kutu.replaceChildren(...liste.map((o) => {
     const bitti = o.evre === 'bitti';
@@ -89,11 +95,17 @@ const TOPLAM_SURELER = [[0, 'Süresiz'], ...[10, 20, 30, 45].map((s) => [s, `${s
 
 function yeniEkrani() {
   let mod = 'kahoot', soruSuresi = 30, toplamSure = 0;
+  let dogrulamaZaman = null, dogrulamaSira = 0;
 
   const alan = el('textarea', {
     class: 'json-alan', rows: 8, spellcheck: false, autocomplete: 'off', autocapitalize: 'off',
     placeholder: 'Soru setinin JSON metnini buraya yapıştır', 'aria-label': 'Soru seti (JSON)',
-    oninput: () => sonuc.replaceChildren(),
+    oninput() {
+      clearTimeout(dogrulamaZaman);
+      dogrulamaSira++;
+      sonuc.replaceChildren();
+      if (alan.value.trim()) dogrulamaZaman = setTimeout(dogrula, 600);
+    },
   });
   const dosya = el('input', {
     type: 'file', accept: '.json,application/json', id: 'dosya', class: 'gorunmez',
@@ -101,8 +113,13 @@ function yeniEkrani() {
       const f = dosya.files[0];
       if (!f) return;
       const okuyucu = new FileReader();
-      okuyucu.onload = () => { alan.value = String(okuyucu.result); dosya.value = ''; dogrula(); };
-      okuyucu.onerror = () => sonucYaz([el('p', { class: 'hata', text: 'Dosya okunamadı.' })]);
+      clearTimeout(dogrulamaZaman);
+      const sira = ++dogrulamaSira;
+      okuyucu.onload = () => {
+        if (sira !== dogrulamaSira || !alan.isConnected) return;
+        alan.value = String(okuyucu.result); dosya.value = ''; dogrula();
+      };
+      okuyucu.onerror = () => { if (sira === dogrulamaSira && alan.isConnected) sonucYaz([el('p', { class: 'hata', text: 'Dosya okunamadı.' })]); };
       okuyucu.readAsText(f);
     },
   });
@@ -110,11 +127,13 @@ function yeniEkrani() {
   const sonucYaz = (d) => sonuc.replaceChildren(...d);
 
   async function dogrula() {
+    clearTimeout(dogrulamaZaman);
+    const sira = ++dogrulamaSira;
     const metin = alan.value.trim();
-    if (!metin) { sonucYaz([el('p', { class: 'hata', text: 'Önce soru setini yapıştır ya da dosya seç.' })]); return false; }
-    kontrol.disabled = true;
+    if (!metin) { sonuc.replaceChildren(); return false; }
+    if (!alan.isConnected) return false;
     const r = await api('/api/dogrula', { set: metin });
-    kontrol.disabled = false;
+    if (sira !== dogrulamaSira || !alan.isConnected) return false;
     if (r.ok && r.veri.tamam) {
       sonucYaz([el('p', { class: 'basari', text: `Geçerli ✓ ${r.veri.soruSayisi} soru` })]);
       return true;
@@ -128,8 +147,6 @@ function yeniEkrani() {
         el('ul', { class: 'hatalar' }, veri.hatalar.map((h) => el('li', { text: String(h) })))]);
     } else sonucYaz([el('p', { class: 'hata', text: hataMetni(veri) })]);
   }
-
-  const kontrol = el('button', { type: 'button', class: 'dugme', text: 'Kontrol et', onclick: dogrula });
 
   const sureKutu = el('div');
   const sureCiz = () => sureKutu.replaceChildren(mod === 'kahoot'
@@ -168,7 +185,7 @@ function yeniEkrani() {
     el('section', { class: 'kart' },
       el('h2', { text: 'Soru seti' }),
       alan,
-      el('div', { class: 'iki-dugme' }, el('label', { for: 'dosya', class: 'dugme', text: '.json dosyası seç' }), kontrol),
+      el('label', { for: 'dosya', class: 'dugme', text: '.json dosyası seç' }),
       dosya, sonuc),
     el('section', { class: 'kart' },
       el('fieldset', {}, el('legend', { text: 'Mod' }),
@@ -178,3 +195,5 @@ function yeniEkrani() {
     kur, kurHata,
   );
 }
+
+yonlendir();

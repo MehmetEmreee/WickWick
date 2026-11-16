@@ -32,7 +32,9 @@ Her soruda zorunlu: id (boş olmayan metin, sette benzersiz), metin (boş olmaya
 İsteğe bağlı soru alanları: etiket (metin), dogru (şık sayısına uygun A–E harfi: ilk şık A), aciklama (metin), gorsel, sure.
 Görsel: http/https URL ya da data:image/png|jpeg|gif|webp|svg+xml veri URI'si. Grafik için data:image/svg+xml;base64,... önerilir: SVG'yi UTF-8 olarak base64 kodla, beyaz zemin ve okunur eksen/ölçek yazıları ekle. İnternet gerektirmez. Diğer şemalar yasaktır.
 sure: 5–600 arası tam sayı saniye; yalnız Kahoot'ta o sorunun süresini ezer (oda varsayılanı 30 saniye).
-LaTeX: metin, siklar, aciklama içinde satır içi $...$ ve blok $$...$$ kullan. JSON'da ters eğik çizgi çift yazılır: \\frac, \\sqrt. Ham HTML kullanma.
+LaTeX: metin, siklar, aciklama içinde satır içi $...$ ve blok $$...$$ kullan. JSON'da ters eğik çizgi çift yazılır: \\frac, \\sqrt.
+Kod: çok satırlı kodu metin/siklar/aciklama içinde çitli blokla yaz: "${'```'}cpp\n...\n${'```'}" (JSON'da satır sonu \n, girinti aynen kalır); cümle içindeki ya da şık olan kısa kodu tek ters tırnakla yaz: ${'`'}x += 1${'`'}. Kod içindeki $ LaTeX sayılmaz.
+Vurgu: yalnız <b>...</b> (ayrıca <i>, <u>) işlenir; diğer bütün HTML olduğu gibi (metin olarak) görünür.
 İyi soru: Tek, tartışmasız bir doğru cevap yaz; çeldiriciler makul olsun. Birimleri ve yuvarlama hassasiyetini belirt. dogru ve aciklama alanlarını hesaplayıp doğrula; açıklamada çözüm gerekçesini ver.
 Küçük, geçerli JSON örneği:
 {"surum":1,"set_id":"ortalama-1","baslik":"Ortalama","ders":"İstatistik","aciklamalari_goster":true,"sorular":[{"id":"S1","metin":"$\\bar x=\\frac{\\sum x}{n}$ ile 2 ve 4'ün ortalaması kaçtır?","siklar":["2","3","4"],"dogru":"B","aciklama":"$$\\bar x=\\frac{2+4}{2}=3$$","sure":45}]}
