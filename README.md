@@ -1,187 +1,152 @@
-# 📱 WickWick
+# WickWick
 
-**Arkadaşlarınla aynı soru setini, herkes kendi telefonundan çözsün.**
-Yerel ağda çalışan, hesap istemeyen, tamamen Türkçe bir canlı test uygulaması. Sorularınızı JSON olarak yükleyin ya da asistanınıza (Claude, Codex) hazırlatın; oda linkini paylaşın, birlikte çözün, sonuçları birlikte tartışın.
+WickWick, aynı soru setini en fazla dört kişinin kendi telefonundan çözmesi için hazırlanmış Türkçe bir yerel ağ uygulamasıdır. Hesap açmadan oda oluşturabilir, bağlantıyı paylaşabilir ve cevaplar açıldıktan sonra gerekçeleri karşılaştırabilirsiniz. Soru setlerini JSON olarak içe aktarabilir veya MCP bağlantısı olan bir asistana hazırlatabilirsiniz.
 
-![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=node.js&logoColor=white)
-![Bağımlılık](https://img.shields.io/badge/ba%C4%9F%C4%B1ml%C4%B1l%C4%B1k-yaln%C4%B1z%20ws%20%2B%20katex-blue)
-![Derleme](https://img.shields.io/badge/derleme%20ad%C4%B1m%C4%B1-yok-lightgrey)
-![MCP](https://img.shields.io/badge/MCP-destekli-8A2BE2)
+## Kurulum
 
----
-
-## ✨ Öne çıkanlar
-
-- **İki oyun modu**
-  - 🏁 **Kahoot** — herkes aynı soruyu aynı anda görür, süreye karşı yarışır. Hızlı ve doğru cevap daha çok puan getirir.
-  - 📝 **Serbest** — herkes kendi hızında, sorular arasında ileri-geri gezerek çözer; isteğe bağlı toplam süre.
-- **Güven seviyesi ve gerekçe** — her cevaba isteğe bağlı 1–3 arası güven ve kısa bir “neden” eklenir; soru boş da bırakılabilir (şıkkı kaldırarak ya da Kahoot'ta “Boş bırak” ile); açılışta herkesin düşüncesi yan yana görünür.
-- **Gizlilik önce** — başkasının cevabı açılış anına kadar gönderilmez. Serbest modda “Cevabı gör” yalnız o soruyu kilitleyen kişiye doğru şık ve açıklamayı açar. Sunucu her kişiye kendine özel görünüm üretir.
-- **LaTeX ve görseller** — `$…$` / `$$…$$` formülleri KaTeX ile internetsiz çizilir; sorulara URL ya da gömülü SVG/PNG grafik eklenebilir.
-- **Kod gösterimi** — ` ```cpp ` çitli bloklar temalı, sözdizimi renkli kod kutusunda; `satır içi kod` ise küçük bir etiket olarak çizilir. Ters tırnaksız eski setlerdeki kod da sezgisel olarak algılanır. `<b>`, `<i>`, `<u>` vurgu olur; başka HTML metin olarak görünür.
-- **Mobil odaklı arayüz** — açılıp kapanan soru numarası ızgarası, yapışkan alt eylem çubuğu, durum rozetleri, sade lobi, ana sayfada “Devam et” kartı ve gerekçe için “+ Not ekle”.
-- **Kalıcı odalar** — odalar diske atomik yazılır; sunucu yeniden başlasa da süreler kaldığı yerden devam eder.
-- **WickWick’e sor** — asistan odalarında cevabı gördükten sonra açıklamanın altından özel soru sohbetini açın. Yanıt canlı gelir; okunmamış yanıt noktası ve çevrimdışı durumu gösterilir. Asistan `soru_bekle` ile bekler, `soru_yanitla` ile yanıtlar; kullanıcı dur diyene dek test sonrasında da devam eder.
-- **Asistan entegrasyonu (MCP)** — “Beni şu konudan 8 soruyla sına” deyin; asistan soruları üretir, odayı kurar, linki verir ve test bitince sonuçlarınızı yorumlar.
-- **Sade yapı** — çerçeve yok, derleyici yok. Düz HTML + CSS + ES modülleri ve Node.js.
-
-## 🚀 Hızlı başlangıç
-
-Node.js 22 veya üstü gerekir.
+Node.js **22 veya üzeri** gerekir. Proje klasöründe:
 
 ```sh
 npm install
 npm start
 ```
 
-- Bilgisayarda: `http://localhost:3000`
-- Telefonda: aynı Wi-Fi ağına bağlanın ve konsolda yazan `http://192.168.…:3000` ya da `http://<bilgisayar-adı>.local:3000` adresini açın.
+Bilgisayarda [localhost:3000](http://localhost:3000) adresini açın. Ayrı bir derleme adımı yoktur; arayüz düz HTML, CSS ve JavaScript modüllerinden oluşur. Sunucuyu terminalde `Ctrl+C` ile kapatabilirsiniz.
 
-Port değiştirmek için `PORT=3001 npm start`. macOS güvenlik duvarı sorarsa Node için gelen yerel bağlantılara izin verin.
+Farklı port kullanmak için:
 
-> ⚠️ Uygulama **yalnız yerel ağ** içindir. İnternete port yönlendirmeyin.
+```sh
+PORT=3001 npm start
+```
 
-## 🎮 Nasıl oynanır?
+### Telefondan bağlanma
 
-1. Arayüzde bir soru seti içe aktarın (örnekler `ornek/` klasöründe).
-2. Modu seçip odayı kurun; 5 haneli oda kodu ve paylaşım linki oluşur.
-3. En fazla 4 kişi adıyla katılır. Kurucu **Başlat** der.
-4. Her soruda şık seçilir (güven ve gerekçe isteğe bağlı, soru boş da bırakılabilir) ve cevap kilitlenir.
-5. Açılışta doğru cevap, açıklama, herkesin seçimi ve puan tablosu görünür. Sonuç ekranında “Yanlışlarım” süzgeci vardır; kendi yanlış şıkkın kırmızı ve “✗ Yanlış” işaretli gelir, kimin neyi seçtiği (güveniyle) şıkların içinde, açıklama ise şıkların hemen altında görünür.
+1. Bilgisayarı ve telefonu aynı yerel ağa bağlayın.
+2. Sunucunun terminalde yazdığı `http://192.168.…:3000` veya `.local` adresini telefonda açın.
+3. Oda bağlantısını diğer katılımcılarla paylaşın.
 
-| | Kahoot | Serbest |
+Telefonda `localhost` telefonun kendisini gösterir; bilgisayarın LAN adresini kullanın. Bağlantı kurulamazsa aynı ağı, misafir ağının cihaz yalıtımını ve güvenlik duvarındaki Node iznini kontrol edin. IP adresi veya port değişirse bağlantı da değişir.
+
+Uygulama yerel ağ kullanımı için tasarlanmıştır. Dahili HTTPS, hesap yönetimi veya internete açık barındırma kurulumu sağlamaz. KaTeX ve uygulama dosyaları yerel sunucudan gelir; dış URL kullanan soru görselleri ayrıca internet isteyebilir.
+
+## Test oluşturma ve çözme
+
+1. Ana sayfada yeni test oluşturun; JSON soru setini yapıştırın veya içe aktarın. Örnekler [`ornek/`](ornek/) klasöründedir.
+2. Modu seçin, odayı oluşturun ve beş haneli kodu ya da bağlantıyı paylaşın.
+3. Katılımcılar adlarıyla katılır; kurucu testi başlatır.
+4. Şıkkınızı seçin. Güven seviyesi ve kısa gerekçe isteğe bağlıdır; soruyu boş bırakabilirsiniz.
+5. Cevaplar açılınca doğru şık, açıklamalar ve katılımcıların seçimleri görünür. Sonuçları kopyalayabilir ve yanlış cevaplarınızı süzebilirsiniz.
+
+| Mod | Akış | Süre ve değerlendirme |
 | --- | --- | --- |
-| Akış | `lobi → soru → açık → … → bitti` | `lobi → çözüm → bitti` |
-| Süre | Soru başına (varsayılan 30 sn, soru bazında ezilebilir) | İsteğe bağlı toplam süre (dakika) |
-| Puan | `1000 × (1 − (geçen/süre)/2)` | Puan yok, doğru sayısına göre sıralama |
-| Açılış | Her sorudan sonra | Herkes gönderince / süre bitince |
+| **Süreli yarış** | Herkes aynı soruyu çözer; her sorudan sonra cevaplar açılır. | Varsayılan soru süresi 30 saniyedir; 5–600 saniye seçilebilir. Doğru ve hızlı cevap daha çok puan getirir. |
+| **Kendi hızında** | Sorular arasında ileri geri gezilir; herkes gönderince veya süre dolunca sonuçlar açılır. | İsteğe bağlı toplam süre vardır; 0 süresizdir. Sıralama doğru sayısına göredir. |
 
-## 🧩 Soru seti biçimi
+Başkasının cevabı açılış anından önce oyuncuya gönderilmez. Kendi hızında modunda “Cevabı gör”, yalnız o soruyu kilitleyen kişiye doğru şıkkı ve açıklamasını açar.
+
+Odalar `veri/odalar.json` içinde atomik olarak saklanır. Yeniden başlatmada süreler duraklatılmaz; kayıtlı bitiş anına göre devam eder. Oyuncu kimliği aynı tarayıcının yerel kaydında tutulur. Tarayıcı verisini silmek veya başka tarayıcıya geçmek mevcut oyuncu kimliğini otomatik taşımaz.
+
+## Soru seti biçimi
 
 ```json
 {
   "surum": 1,
-  "set_id": "istatistik-modul-3",
-  "baslik": "Merkezi Eğilim Ölçüleri",
-  "ders": "İstatistik",
-  "aciklamalari_goster": true,
+  "set_id": "temel-matematik",
+  "baslik": "Temel Matematik",
   "sorular": [
     {
       "id": "S1",
-      "etiket": "Ünite 5",
-      "metin": "$\\{2, 4, 4, 7\\}$ kümesinin modu nedir?",
-      "siklar": ["2", "4", "4.25", "7"],
+      "metin": "$2 + 2$ kaçtır?",
+      "siklar": ["3", "4", "5"],
       "dogru": "B",
-      "aciklama": "En sık tekrar eden değer 4'tür.",
-      "sik_aciklamalari": ["2 yalnız bir kez geçer.", "4 iki kez geçer; en sık değer olduğu için moddur.", "4.25 aritmetik ortalamadır, mod değildir.", "7 en büyük değerdir, en sık değer değildir."],
-      "sure": 45
+      "aciklama": "İki ile ikinin toplamı dörttür."
     }
   ]
 }
 ```
 
-| Alan | Zorunlu | Açıklama |
-| --- | :---: | --- |
-| `surum` | ✅ | Şimdilik `1` |
-| `set_id`, `baslik` | ✅ | Boş olmayan metin |
-| `sorular` | ✅ | En az bir soru |
-| `sorular[].id`, `metin` | ✅ | `id` set içinde benzersiz |
-| `sorular[].siklar` | ✅ | 2–5 boş olmayan metin |
-| `dogru` | — | Şık sayısına uygun A–E harfi |
-| `aciklama` | — | Cevap açılınca gösterilir |
-| `etiket` | — | Ünite/bölüm adı (ör. `Ünite 5`); isteğe bağlı ` \| konu` eki yalnız cevap açılınca gösterilir. `\|` öncesi cevaba ipucu içermez. |
-| `sik_aciklamalari` | — | `siklar` ile aynı uzunlukta metin dizisi; boş metin olabilir. Genel açıklamayla birlikte açılır; `aciklamalari_goster: false` ikisini de gizler. |
-| `gorsel` | — | http/https URL ya da `data:image/...` veri URI'si |
-| `sure` | — | 5–600 saniye; Kahoot'ta o sorunun süresini ezer |
+`surum: 1`, boş olmayan `set_id`, `baslik` ve en az bir soru gerekir. Her sorunun `id` değeri benzersiz olmalı; `metin` ve 2–5 boş olmayan `siklar` içermelidir. `dogru`, şıklara uygun A–E harfidir ve isteğe bağlıdır. `ders`, `etiket`, `aciklama`, `sik_aciklamalari`, `gorsel` ve soru başına `sure` eklenebilir. Hatalı alanlar arayüzde Türkçe olarak belirtilir.
 
-Hatalı setlerde doğrulayıcı tüm hataları alan adıyla birlikte Türkçe listeler, örn. `sorular[2].siklar: 2 ile 5 arası şık olmalı (6 var)`.
-Yeni test ekranında yapıştırılan JSON otomatik doğrulanır (“Kontrol et” düğmesi yoktur). Kod için metin/şık/açıklamada çitli blok ya da tek ters tırnak kullanılır.
-Ayrıntılı sözleşme için [SARTNAME.md](SARTNAME.md) dosyasına bakın.
+- Formüller: satır içinde `$…$`, ayrı satırda `$$…$$`. JSON içinde LaTeX ters eğik çizgilerini çift yazın: `\\frac`.
+- Kod: tek ters tırnakla satır içi kod; dil etiketli üç ters tırnakla kod bloğu. Mevcut renklendirme C/C++ odaklıdır; diğer dillerin gösterimi tam dil desteği anlamına gelmez.
+- Vurgu: soru metinlerinde `<b>`, `<i>`, `<u>` desteklenir. Diğer HTML metin olarak gösterilir.
+- Görseller: HTTP/HTTPS URL veya desteklenen `data:image/...` veri URI’si.
 
-## 🤖 Asistanla kullanım (MCP)
+Ayrıntılı alanlar, sınırlar ve HTTP/WS sözleşmesi için [`SARTNAME.md`](SARTNAME.md) dosyasına bakın. Teknik uyumluluk için süreli yarışın protokol değeri `kahoot`, kendi hızında modunun değeri `serbest` olarak korunur.
 
-Proje, Node.js 22+ ile ek bağımlılık gerektirmeyen bir stdio MCP sunucusu içerir: [`mcp/sunucu.mjs`](mcp/sunucu.mjs).
+## MCP ile asistan kullanımı
 
-| Araç | Ne yapar? |
-| --- | --- |
-| `soru_seti_semasi` | Soru seti biçimini asistana anlatır (kod için çitli blok/ters tırnak ve `<b>` vurgusu dahil) |
-| `test_olustur` | Seti yükler, odayı kurar, telefon linkini döner |
-| `test_durumu` | Evre ve ilerleme bilgisini verir |
-| `test_sonucu` | Test bitince sonuçları okur |
-| `soru_bekle` | Özel oyuncu sorularını bağlamıyla bekler (`kod?`, `sure?`: en çok 55 sn) |
-| `soru_yanitla` | `mesajId` ve `metin` ile yanıt gönderir (`kod?`) |
+[`mcp/sunucu.mjs`](mcp/sunucu.mjs), stdio üzerinden çalışan MCP sunucusudur. Önce `npm install` çalıştırın. MCP istemcinize `node` komutunu ve bu dosyanın **gerçek mutlak yolunu** tanımlayın. Yerel klasörünüzün adını değiştirmek gerekmez.
 
-`test_olustur`, oda kurmadan önce görünür açıklamaları denetler: `aciklama` en az 120 karakter, her şık açıklaması en az 30 karakter ve aynı soruda birbirinden farklı olmalı; `aciklamasiz: true` yalnız kullanıcı açıkça açıklamasız test veya gizleme istediğinde bu denetimi atlar (uygulamaya yapıştırma ve `/api/dogrula` değişmez).
+Codex yapılandırma örneği (`~/.codex/config.toml`):
 
-Linkten sonra asistan, kullanıcı dur diyene dek `soru_bekle` döngüsünü sürdürür; alt ajan varsa her soruyu ayrı ajana verip paralel yanıtlatır. Sohbet protokolü: WS `sor { soruId, metin }`; yönetici anahtarıyla `POST /api/odalar/:kod/sorular/bekle` ve `POST /api/odalar/:kod/sorular/yanitla` (ayrıntılar [şartnamede](SARTNAME.md#asistana-soru-sohbeti)).
-
-**Claude Code**
-
-```sh
-claude mcp add test-odasi -- node /tam/yol/test-odasi/mcp/sunucu.mjs
+```toml
+[mcp_servers.wickwick]
+command = "node"
+args = ["/tam/yol/WickWick/mcp/sunucu.mjs"]
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`)
+JSON yapılandırması kullanan MCP istemcileri için:
 
 ```json
 {
   "mcpServers": {
-    "test-odasi": {
+    "wickwick": {
       "command": "node",
-      "args": ["/tam/yol/test-odasi/mcp/sunucu.mjs"]
+      "args": ["/tam/yol/WickWick/mcp/sunucu.mjs"]
     }
   }
 }
 ```
 
-**Codex** (`~/.codex/config.toml`)
+Mevcut MCP kayıt adınızı değiştirmek zorunda değilsiniz. `node` istemcinin PATH ortamında yoksa çalıştırılabilir dosyanın mutlak yolunu kullanın. İstemcinin yapılandırma dosyası ve yeniden yükleme yöntemi kendi sürümüne bağlıdır.
 
-```toml
-[mcp_servers.test-odasi]
-command = "node"
-args = ["/tam/yol/test-odasi/mcp/sunucu.mjs"]
-```
+| Araç | İşlev |
+| --- | --- |
+| `soru_seti_semasi` | Geçerli soru seti biçimini verir. |
+| `test_olustur` | Seti yükler, asistan odasını kurar ve katılım bağlantısını döndürür. |
+| `test_durumu` | Odanın evresini ve ilerlemesini getirir. |
+| `test_sonucu` | Test sonuçlarını getirir. |
+| `soru_bekle` | Oyuncu sorularını bağlamlarıyla bekler; tek bekleme en çok 55 saniyedir. |
+| `soru_yanitla` | Alınan `mesajId` için asistan yanıtını gönderir. |
 
-Örnek akış:
+Örnek istek: “Beni olasılık konusundan 8 soruyla sına; testi aç ve sorularımı yanıtlamak için bekle.”
 
-> **Sen:** Beni ortalama, medyan ve mod konusundan 8 soruyla sına.
-> **Asistan:** Soruları hazırladım, odayı kurdum: `http://192.168.1.20:3000/#/oda/48213`
-> *(…test çözülür…)*
-> **Sen:** Bitti, sonuçlarımı yorumla.
+MCP varsayılan olarak `http://localhost:3000` adresini kullanır; erişemezse sunucuyu başlatmayı dener. `TEST_ODASI_URL` ile adresi, `TEST_ODASI_VERI_DIZINI` ile veri dizinini değiştirebilirsiniz. Çalışan sunucu ile MCP aynı veri dizinini kullanmalıdır.
 
-MCP varsayılan olarak `http://localhost:3000` adresini kullanır; sunucu çalışmıyorsa kendisi başlatır. Farklı adres için `TEST_ODASI_URL`, veri dizini için `TEST_ODASI_VERI_DIZINI` ortam değişkenlerini kullanın.
+`test_olustur`, görünür açıklamalarda genel açıklamanın en az 120, her şık açıklamasının en az 30 karakter olmasını ve şık açıklamalarının birbirinden farklı olmasını denetler. Kullanıcı açıkça açıklamasız test istediğinde `aciklamasiz: true` bu ek denetimi atlayabilir. Yukarıdaki küçük JSON örneği arayüzde geçerlidir; MCP'nin açıklama denetimini karşılaması için genişletilmelidir.
 
-## 🗂️ Proje yapısı
+### WickWick’e sor
 
-```
-test-odasi/
-├── sunucu/          HTTP + WebSocket sunucusu (Node 22, ESM)
-│   ├── sunucu.js    HTTP, statik dosyalar, WS bağlantıları
-│   ├── oda.js       Oda durumu, evre geçişleri, puanlama, kişiye özel görünüm
-│   ├── dogrula.js   Soru seti doğrulaması
-│   ├── depo.js      Kalıcı kayıt (veri/odalar.json)
-│   └── test/        node --test testleri
-├── public/          Arayüz (düz HTML + CSS + ES modülleri)
-├── mcp/             Asistanlar için MCP sunucusu
-├── ornek/           Örnek soru setleri
-├── OKU.md           Ayrıntılı çalıştırma notları
-└── SARTNAME.md      Sunucu ↔ arayüz sözleşmesi
-```
+Asistan odalarında cevabı gördükten sonra “WickWick’e sor” düğmesiyle o soruya özel sohbet açılır. Kullanıcı mesajları sağda kompakt balon, asistan yanıtları geniş alanda gösterilir. Asistan mesajları kısa paragrafları, basit başlık ve listeleri, **kalın** / *italik* vurguyu, kodu ve KaTeX formüllerini destekler. Uzun kod ve formüller kendi alanlarında yatay kayar. Bu, tüm Markdown özelliklerini kapsayan bir düzenleyici değildir.
 
-## 🧪 Testler
+Bekleyen mesaj için kuyruk, gerçek yanıt hakkı alındığında “Düşünüyor…”, asistan çevrimdışıyken ayrı durum gösterilir. Yanıt tamamlandığında bütün olarak gelir; token akışı yoktur. Asistanın `soru_bekle` döngüsünde çalışması gerekir; web sunucusu tek başına AI yanıtı üretmez.
+
+Yeni görünüm, kaydedilmiş mesajlara da uygulanır. Eski yanıt düz metin olarak yazılmışsa geçmişe otomatik paragraf veya liste eklenmez; yalnız metindeki mevcut yapılar biçimlenir. Arayüz değişiklikleri için mevcut oda sayfasını yenilemek yeterlidir. MCP talimat değişiklikleri ise MCP süreci yeniden yüklendiğinde okunur.
+
+## Test ve geliştirme
 
 ```sh
 npm test
 ```
 
-Testler geçici dizin kullanır; `veri/` klasörüne dokunmaz.
+Testler geçici veri dizinleri kullanır; mevcut `veri/` odalarına yazmaz. Mantık, şema, kalıcılık ve güvenlik kontrollerine ek olarak HTTP + iki WebSocket ile uçtan uca tur ve asistan sohbet akışı sınanır. Yerel port açamayan sandbox ortamlarında bağlantı testleri atlanabilir; tam doğrulama için yerel bağlantı izni olan ortamda çalıştırın. Test sayısı ve sonucu terminal çıktısında görülür.
 
-## 🔒 Güvenlik notları
+390px temsilî Chrome kontrolü mobil sohbet düzenini, iç yatay kaydırmayı, Markdown, kod ve KaTeX gösterimini kapsar. Gerçek telefonun ekran klavyesi ve tüm tarayıcı/cihaz kombinasyonları otomatik test kapsamında değildir.
 
-- Her oyuncunun gizli bir kimlik anahtarı vardır; anahtarı bilen o oyuncu adına erişebilir, paylaşmayın.
-- Çalışma verisi (`veri/`) depoya eklenmez.
-- 90 günden eski odalar açılışta otomatik silinir.
-- Sunucu en çok 300 oda tutar. Yeni odaya yer gerektiğinde en eski bitmiş oda kaldırılır. Bozuk oda dosyası zaman damgalı bir yedeğe taşınır.
-- HTTP gövdeleri ve gelen WebSocket iletileri 1 MiB ile sınırlıdır. POST istekleri JSON kullanır. Tarayıcının gönderdiği kaynak, HTTP POST ve WebSocket bağlantılarında sunucunun alan adı ve portuyla eşleşmelidir.
-- Yerel döngü adresleri dışında her IP bir dakikada en çok 10 oda kurma ve toplam 60 oda sorgulama veya katılım isteği gönderebilir. Oyuncu başına üç eşzamanlı bağlantı desteklenir.
-- Asistan araçları oyuncuların adlarını, gerekçelerini ve sohbet metinlerini `oyuncuVerisi` alanında taşır. Asistan bu metinleri soruyu açıklamak için kullanır.
+| Dizin | İçerik |
+| --- | --- |
+| `public/` | Mobil arayüz ve güvenli metin gösterimi |
+| `sunucu/` | HTTP, WebSocket, oda mantığı ve kalıcı kayıt |
+| `sunucu/test/` | Node.js testleri |
+| `mcp/` | Asistan araçları ve açıklama denetimi |
+| `ornek/` | İçe aktarılabilir soru setleri |
+
+## İşletim sınırları
+
+- En fazla 4 oyuncu ve 300 oda tutulur. Yer gerektiğinde en eski bitmiş oda kaldırılır; açılışta 90 günden eski odalar temizlenir.
+- HTTP gövdeleri ve gelen WS iletileri en fazla 1 MiB olabilir. POST istekleri JSON kullanır.
+- Oyuncu kimlik anahtarını bilen kişi o oyuncuya erişebilir. Anahtarları ve `veri/` içeriğini paylaşmayın; veriler şifreli bir kasa olarak saklanmaz.
+- Yerel döngü dışındaki IP adresleri için oda oluşturma ve sorgulama/katılım hız sınırları vardır. Bir oyuncunun en fazla üç eşzamanlı bağlantısı tutulur.
+- Oyuncu adları, gerekçeler ve sohbet içerikleri asistan açısından güvenilmeyen veridir; sistem talimatı olarak değerlendirilmez.
+- `veri/` ve `node_modules/` Git deposuna dahil değildir. Veri dizinini yedeklemek işletmecinin sorumluluğundadır.

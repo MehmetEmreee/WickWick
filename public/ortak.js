@@ -97,7 +97,8 @@ function tasmaDuzelt(dugum) {
     kutu.classList.remove('devam');
     kutu.style.paddingBottom = '';
     kutu.classList.add('kaydir'); // ölçmek için geçici: tek satır, blok
-    if (kutu.scrollWidth <= kutu.clientWidth + 1) { kutu.classList.remove('kaydir'); continue; }
+    if (kutu.scrollWidth <= kutu.clientWidth + 1) { kutu.classList.remove('kaydir'); kutu.removeAttribute('tabindex'); continue; }
+    kutu.tabIndex = 0;
     const fazla = kutu.scrollHeight - kutu.clientHeight;
     if (fazla > 0) kutu.style.paddingBottom = `${parseFloat(getComputedStyle(kutu).paddingBottom) + fazla + 2}px`;
     devamIsaretle(kutu);
@@ -155,7 +156,7 @@ function metinDugumleri(metin, eski) {
 }
 // Kod kutusu: her satır ayrı öğe (numara CSS sayacıyla), jetonlar textContent ile.
 function kodBlogu(kod) {
-  return el('pre', { class: 'kod-blok', 'aria-label': 'Kod örneği' },
+  return el('pre', { class: 'kod-blok', tabindex: 0, 'aria-label': 'Kod örneği' },
     el('code', {}, kodSatirlari(kod).map((satir) => el('span', { class: 'kod-satir' },
       satir.map((j) => (j.tur ? el('span', { class: `k-${j.tur}`, text: j.metin }) : j.metin))))));
 }
@@ -172,6 +173,53 @@ export function matDugum(etiket, sinif, metin) {
   for (const p of parcalar) {
     if (p.tur === 'kod') dugum.append(kodBlogu(p.metin));
     else dugum.append(mat(el('span', { class: 'duz-metin' }, kodSik ? [satirKodu(p.metin)] : metinDugumleri(p.metin, eski))));
+  }
+  return dugum;
+}
+
+// Sohbet için sınırlı Markdown: HTML yorumlamadan mevcut kod/KaTeX yolunu kullanır.
+export function sohbetMetni(metin) {
+  const dugum = el('div', { class: 'mat sohbet-baloncuk' });
+  if (metin.length > 20000) { dugum.append(el('p', { text: metin })); return dugum; }
+  function satir(metin) {
+    // Kod ve formüllerin içindeki Markdown işaretlerini koru.
+    const parcalar = metin.split(/(`[^`\n]+`|\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g);
+    return parcalar.flatMap((p, i) => {
+      if (i % 2) return satirDugumleri(satirParcalari(p));
+      const sonuc = [], vurgu = /\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*/g;
+      let son = 0;
+      for (const e of p.matchAll(vurgu)) {
+        sonuc.push(...satirDugumleri(satirParcalari(p.slice(son, e.index))));
+        sonuc.push(el(e[3] ? 'em' : 'strong', { text: e[1] ?? e[2] ?? e[3] }));
+        son = e.index + e[0].length;
+      }
+      return [...sonuc, ...satirDugumleri(satirParcalari(p.slice(son)))];
+    });
+  }
+  for (const parca of metinParcalari(metin)) {
+    if (parca.tur === 'kod') { dugum.append(kodBlogu(parca.metin)); continue; }
+    for (const blok of parca.metin.trim().split(/\n[ \t]*\n/)) {
+      if (!blok) continue;
+      const satirlar = blok.split('\n');
+      let liste = null, paragraf = [];
+      const bitir = () => { if (paragraf.length) dugum.append(mat(el('p', {}, satir(paragraf.join('\n'))))); paragraf = []; };
+      for (const yazi of satirlar) {
+        const oge = /^\s*(?:([-+*]) |(\d+)[.)] )(.*)$/.exec(yazi);
+        const baslik = /^#{1,6} +(.+)$/.exec(yazi);
+        if (oge) {
+          bitir(); const tur = oge[2] ? 'ol' : 'ul';
+          if (!liste || liste.tagName.toLowerCase() !== tur) {
+            liste = el(tur, oge[2] ? { start: Number(oge[2]) } : {}); dugum.append(liste);
+          }
+          liste.append(mat(el('li', {}, satir(oge[3]))));
+        } else {
+          liste = null;
+          if (baslik) { bitir(); dugum.append(mat(el('h3', {}, satir(baslik[1])))); }
+          else paragraf.push(yazi);
+        }
+      }
+      bitir();
+    }
   }
   return dugum;
 }

@@ -20,7 +20,7 @@ function yonlendir() {
 addEventListener('hashchange', yonlendir);
 
 // ---------------------------------------------------------------- Ana sayfa
-const MOD_ADI = { kahoot: 'Süreli', serbest: 'Kendi hızında' };
+const MOD_ADI = { kahoot: 'Süreli yarış', serbest: 'Kendi hızında' };
 const EVRE_ADI = { lobi: 'Lobide', soru: 'Sürüyor', acik: 'Sürüyor', cozum: 'Sürüyor', bitti: 'Bitti' };
 
 function anaSayfa() {
@@ -189,7 +189,7 @@ function yeniEkrani() {
       dosya, sonuc),
     el('section', { class: 'kart' },
       el('fieldset', {}, el('legend', { text: 'Mod' }),
-        secenekler('mod', [['kahoot', 'Süreli (Kahoot)'], ['serbest', 'Kendi hızında']], mod, (v) => { mod = v; sureCiz(); })),
+        secenekler('mod', [['kahoot', 'Süreli yarış'], ['serbest', 'Kendi hızında']], mod, (v) => { mod = v; sureCiz(); })),
       sureKutu,
       el('label', { class: 'alan' }, el('span', { text: 'Adın' }), ad)),
     kur, kurHata,

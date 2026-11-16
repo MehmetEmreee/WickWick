@@ -1,5 +1,5 @@
 // Oda: katılma, WebSocket bağlantısı ve durum nesnesinden türeyen ekranlar.
-import { el, depo, api, hataMetni, matDugum, gorselKutusu, kopyaDugmesi, secenekler, HARF } from './ortak.js';
+import { el, depo, api, hataMetni, matDugum, sohbetMetni, gorselKutusu, kopyaDugmesi, secenekler, HARF } from './ortak.js';
 import { sonucMetni } from './sonucMetni.js';
 
 const GUVEN = { 1: 'Tahmin', 2: 'Kısmen', 3: 'Eminim' };
@@ -847,23 +847,13 @@ function sohbetGirisi(s, d) {
   b.setAttribute('aria-label', `WickWick'e sor${okunmamis ? ', yeni yanıt' : ''}`);
   return b;
 }
-function asistanBaloncugu(metin) {
-  const d = matDugum('div', 'sohbet-baloncuk', metin);
-  // Çit çevresindeki satır sonları yerine kod bloğunun tek aralığını kullan.
-  for (const kod of d.querySelectorAll('.kod-blok')) {
-    const once = kod.previousSibling?.lastChild, sonra = kod.nextSibling?.firstChild;
-    if (once?.nodeType === 3) once.textContent = once.textContent.trimEnd();
-    if (sonra?.nodeType === 3) sonra.textContent = sonra.textContent.trimStart();
-  }
-  return d;
-}
 function sohbetAc(id, giris) {
   o.sohbet?.kapat();
   const oturum = o, kaydirma = scrollY, govdeStili = document.body.getAttribute('style');
   let iyimser = [], imza = '', hata = '', altta = true;
   const dugumler = new Map();
   const icerik = el('div', { class: 'sohbet-icerik' });
-  const liste = el('div', { class: 'sohbet-mesajlar', role: 'log', 'aria-label': 'Sohbet', onscroll() { altta = liste.scrollHeight - liste.scrollTop - liste.clientHeight < 48; } }, icerik);
+  const liste = el('div', { class: 'sohbet-mesajlar', role: 'log', 'aria-label': 'Sohbet', 'aria-relevant': 'additions', tabindex: 0, onscroll() { altta = liste.scrollHeight - liste.scrollTop - liste.clientHeight < 48; } }, icerik);
   const durum = el('p', { class: 'sohbet-durum not', role: 'status' });
   const alan = el('textarea', { rows: 1, maxLength: 500, placeholder: 'Sorunu yaz…', 'aria-label': 'Sorun',
     oninput: boyutla,
@@ -908,9 +898,9 @@ function sohbetAc(id, giris) {
       for (const [id, d] of dugumler) if (!kalan.has(id)) { d.remove(); dugumler.delete(id); }
       for (const m of hepsi) {
         if (dugumler.has(m.id)) continue;
-        const d = el('div', { class: `sohbet-satir ${m.kim}` },
+        const d = el('div', { class: `sohbet-satir ${m.kim}`, 'aria-label': m.kim === 'asistan' ? 'WickWick' : 'Sen' },
           m.kim === 'asistan' && el('img', { src: '/logo.svg', alt: '', class: 'sohbet-avatar' }),
-          m.kim === 'asistan' ? asistanBaloncugu(m.metin) : el('div', { class: 'sohbet-baloncuk', text: m.metin }));
+          m.kim === 'asistan' ? sohbetMetni(m.metin) : el('div', { class: 'sohbet-baloncuk', text: m.metin }));
         dugumler.set(m.id, d);
       }
       hepsi.forEach((m, i) => { const d = dugumler.get(m.id); if (icerik.children[i] !== d) icerik.insertBefore(d, icerik.children[i] ?? null); });
@@ -920,7 +910,7 @@ function sohbetAc(id, giris) {
     bosSohbet.hidden = hepsi.length > 0;
     for (const b of oneriler.children) b.disabled = oturum.ws?.readyState !== 1;
     const bekliyor = hepsi.at(-1)?.kim === 'oyuncu';
-    durum.textContent = hata || (s.sohbetDurum === 'yaziyor' ? 'Asistan yazıyor…' : bekliyor && !oturum.durum.asistanBagli ? 'Asistan şu an çevrimdışı; sohbet açılınca cevaplanacak.' : '');
+    durum.textContent = hata || (oturum.ws?.readyState !== 1 ? 'Bağlantı kesildi; yeniden bağlanılıyor…' : s.sohbetDurum === 'yaziyor' ? 'Düşünüyor…' : bekliyor ? (oturum.durum.asistanBagli ? 'Yanıt için sırada…' : 'Asistan çevrimdışı; sorun kuyrukta bekliyor.') : '');
     gonderD.disabled = !alan.value.trim() || oturum.ws?.readyState !== 1;
   }
   function goruntu() {
