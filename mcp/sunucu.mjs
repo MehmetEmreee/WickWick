@@ -35,7 +35,7 @@ sure: 5–600 arası tam sayı saniye; yalnız Kahoot'ta o sorunun süresini eze
 LaTeX: metin, siklar, aciklama içinde satır içi $...$ ve blok $$...$$ kullan. JSON'da ters eğik çizgi çift yazılır: \\frac, \\sqrt.
 Kod: çok satırlı kodu metin/siklar/aciklama içinde çitli blokla yaz: "${'```'}cpp\n...\n${'```'}" (JSON'da satır sonu \n, girinti aynen kalır); cümle içindeki ya da şık olan kısa kodu tek ters tırnakla yaz: ${'`'}x += 1${'`'}. Kod içindeki $ LaTeX sayılmaz.
 Vurgu: yalnız <b>...</b> (ayrıca <i>, <u>) işlenir; diğer bütün HTML olduğu gibi (metin olarak) görünür.
-İyi soru: Tek, tartışmasız bir doğru cevap yaz; çeldiriciler makul olsun. Birimleri ve yuvarlama hassasiyetini belirt. dogru ve aciklama alanlarını hesaplayıp doğrula; açıklamada çözüm gerekçesini ver.
+İyi soru: Tek, tartışmasız bir doğru cevap yaz; çeldiriciler makul olsun. Birimleri ve yuvarlama hassasiyetini belirt. dogru ve aciklama alanlarını hesaplayıp doğrula; açıklamada çözüm gerekçesini ver. Oyuncu soruyu boş bırakabilir ve güven seçimi isteğe bağlıdır; bu yüzden şıklara "Bilmiyorum / emin değilim" benzeri bir seçenek ekleme.
 Küçük, geçerli JSON örneği:
 {"surum":1,"set_id":"ortalama-1","baslik":"Ortalama","ders":"İstatistik","aciklamalari_goster":true,"sorular":[{"id":"S1","metin":"$\\bar x=\\frac{\\sum x}{n}$ ile 2 ve 4'ün ortalaması kaçtır?","siklar":["2","3","4"],"dogru":"B","aciklama":"$$\\bar x=\\frac{2+4}{2}=3$$","sure":45}]}
 Akış: Bu biçimde set üret, test_olustur çağır, telefon linkini kullanıcıya ver. Kullanıcı bitti deyince test_sonucu çağır.`;
