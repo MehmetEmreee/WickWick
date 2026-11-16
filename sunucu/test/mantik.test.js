@@ -8,7 +8,7 @@ import { odaKur, oyuncuEkle, islem, gorunum, sureyiIsle, puan } from '../oda.js'
 import { depoAc } from '../depo.js';
 
 const setUret = (aciklamalari_goster = true) => ({ surum: 1, set_id: 'deneme', baslik: 'Test', aciklamalari_goster, sorular: [
-  { id: 'Q1', metin: 'Birinci', siklar: ['Bir', 'İki'], dogru: 'B', aciklama: 'GİZLİ-AÇIKLAMA-1' },
+  { id: 'Q1', metin: 'Birinci', siklar: ['Bir', 'İki'], dogru: 'B', aciklama: 'GİZLİ-AÇIKLAMA-1', sik_aciklamalari: ['GİZLİ-ŞIK-YANLIŞ', 'GİZLİ-ŞIK-DOĞRU'] },
   { id: 'Q2', metin: 'İkinci', siklar: ['Üç', 'Dört'], dogru: 'A', aciklama: 'GİZLİ-AÇIKLAMA-2' }
 ] });
 function kur(mod = 'kahoot', goster = true) {
@@ -22,7 +22,7 @@ function cevap(oda, p, soruId = 'Q1', tur = 'kilitle', sik = 'B') {
 }
 function gizliYok(g) {
   const json = JSON.stringify(g);
-  for (const gizli of ['AYIRT-EDİCİ-GİZLİ-NEDEN', 'GİZLİ-AÇIKLAMA', '"dogru":', '"aciklama":', '"cevaplar":', '"anahtar":']) assert.ok(!json.includes(gizli), gizli);
+  for (const gizli of ['AYIRT-EDİCİ-GİZLİ-NEDEN', 'GİZLİ-AÇIKLAMA', 'GİZLİ-ŞIK', '"sik_aciklamalari":', '"dogru":', '"aciklama":', '"cevaplar":', '"anahtar":']) assert.ok(!json.includes(gizli), gizli);
 }
 for (const mod of ['kahoot', 'serbest']) {
   test(`${mod}: cevaplar açılışa kadar kişiye özel; açılıştan sonra görünür`, () => {
@@ -42,6 +42,7 @@ for (const mod of ['kahoot', 'serbest']) {
     const acik = gorunum(oda, diger.id);
     assert.equal(acik.sorular[0].dogru, 'B');
     assert.ok(JSON.stringify(acik).includes('GİZLİ-AÇIKLAMA-1'));
+    assert.deepEqual(acik.sorular[0].sik_aciklamalari, oda.set.sorular[0].sik_aciklamalari);
     assert.ok(JSON.stringify(acik).includes('AYIRT-EDİCİ-GİZLİ-NEDEN'));
   });
   test(`${mod}: aciklamalari_goster false ise hiç açıklama gönderilmez`, () => {
@@ -143,6 +144,8 @@ test('Serbest: kontrol soruyu kilitler, doğruyu yalnız o oyuncuya açar', () =
   islem(oda, p, { tur: 'kontrol', soruId: 'Q1' }, 2500);
   const g = gorunum(oda, p.id).sorular;
   assert.deepEqual([g[0].dogru, g[0].aciklama, g[0].benim.kilitli, g[0].acik, g[0].cevaplar], ['B', 'GİZLİ-AÇIKLAMA-1', true, false, undefined]);
+  assert.deepEqual(g[0].sik_aciklamalari, oda.set.sorular[0].sik_aciklamalari);
+  assert.ok(!('sik_aciklamalari' in g[1]));
   assert.equal(g[1].dogru, undefined);
   gizliYok(gorunum(oda, diger.id));
   assert.throws(() => cevap(oda, p, 'Q1', 'taslak', 'B'), /kilitli/);
@@ -228,4 +231,58 @@ test('Depo atomik geri yükleme, zamanlayıcı hariç kayıt ve 90 günlük temi
     const geri=odalar.get(oda.kod); assert.equal(geri.oyuncular[0].anahtar,p.anahtar); assert.equal(geri.oyuncular[0].baglantilar.size,0);
     assert.equal(geri.bitis,31000); assert.equal(sureyiIsle(geri,32000),true); assert.equal(geri.evre,'acik');
   } finally { await rm(dizin,{recursive:true,force:true}); }
+});
+
+
+test('Şık açıklamaları: dizi, uzunluk ve metin doğrulaması; eski setler geçerli', () => {
+  for (const [deger, alan, ileti] of [
+    ['yanlış', 'sik_aciklamalari', 'metin dizisi olmalı'],
+    [null, 'sik_aciklamalari', 'metin dizisi olmalı'],
+    [['tek'], 'sik_aciklamalari', 'siklar ile aynı uzunlukta olmalı'],
+    [['a', 'b', 'c'], 'sik_aciklamalari', 'siklar ile aynı uzunlukta olmalı'],
+    [['a', 1], 'sik_aciklamalari[1]', 'metin olmalı']
+  ]) {
+    const s = setUret(); s.sorular[0].sik_aciklamalari = deger;
+    assert.ok(dogrula(s).hatalar.includes(`sorular[0].${alan}: ${ileti}`));
+  }
+  const s = setUret(); s.sorular[0].sik_aciklamalari = ['', 'Ayrıntılı gerekçe'];
+  assert.deepEqual(dogrula(s).hatalar, []);
+  assert.deepEqual(dogrula(s).set.sorular[0].sik_aciklamalari, ['', 'Ayrıntılı gerekçe']);
+  delete s.sorular[0].sik_aciklamalari;
+  assert.deepEqual(dogrula(s).hatalar, []);
+});
+for (const goster of [true, false]) test(`Şık açıklamaları: kontrol ve bitiş görünürlüğü (${goster})`, () => {
+  const { oda, p, diger } = kur('serbest', goster);
+  for (const kisi of [p, diger]) gizliYok(gorunum(oda, kisi.id));
+  cevap(oda, p, 'Q1', 'taslak', 'A');
+  islem(oda, p, { tur: 'kontrol', soruId: 'Q1' }, 2500);
+  const kontrol = gorunum(oda, p.id).sorular[0];
+  for (const alan of ['aciklama', 'sik_aciklamalari']) {
+    assert.equal(alan in kontrol, goster);
+    if (goster) assert.deepEqual(kontrol[alan], oda.set.sorular[0][alan]);
+  }
+  gizliYok(gorunum(oda, diger.id));
+  islem(oda, p, { tur: 'simdiAc' }, 3000);
+  assert.equal(oda.evre, 'bitti');
+  for (const kisi of [p, diger]) {
+    const s = gorunum(oda, kisi.id).sorular[0];
+    for (const alan of ['aciklama', 'sik_aciklamalari']) {
+      assert.equal(alan in s, goster);
+      if (goster) assert.deepEqual(s[alan], oda.set.sorular[0][alan]);
+    }
+    assert.ok(!('sik_aciklamalari' in gorunum(oda, kisi.id).sorular[1]));
+  }
+});
+
+test('Serbest: gönderim kontrol sayısını artırmaz, taslak yine değiştirilemez', () => {
+  const { oda, p } = kur('serbest');
+  islem(oda,p,{tur:'taslak',soruId:'Q1',sik:'B',guven:null},2000);
+  islem(oda,p,{tur:'taslak',soruId:'Q2',sik:'A',guven:null},2000);
+  islem(oda,p,{tur:'kontrol',soruId:'Q1'},2100);
+  islem(oda,p,{tur:'gonder'},2200);
+  const sorular = gorunum(oda,p.id,2200).sorular;
+  assert.equal(sorular.filter(s=>s.benim?.sik).length,2);
+  assert.deepEqual(sorular.filter(s=>s.benim?.kilitli && s.dogru).map(s=>s.id),['Q1']);
+  assert.equal(sorular.find(s=>s.id==='Q2').dogru,undefined);
+  assert.throws(()=>islem(oda,p,{tur:'taslak',soruId:'Q2',sik:'B',guven:null},2300),/evrede/);
 });

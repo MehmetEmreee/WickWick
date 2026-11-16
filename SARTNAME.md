@@ -1,4 +1,4 @@
-# Test Odası — şartname
+# WickWick — şartname
 
 İki ile dört kişinin aynı soru setini kendi telefonundan çözdüğü, yalnız yerel ağda çalışan web uygulaması.
 Hedef cihazlar: iPhone 13 ve iPhone 17 Pro Max, Safari. Arayüzün tamamı Türkçe. Hesap yok, yalnız adla katılınır.
@@ -39,7 +39,7 @@ test-odasi/
   "surum": 1, "set_id": "istatistik-modul-3", "baslik": "…", "ders": "…",
   "aciklamalari_goster": true,
   "sorular": [
-    { "id": "S1", "etiket": "Kolay", "metin": "…", "siklar": ["…","…"],
+    { "id": "S1", "etiket": "Ünite 5", "metin": "…", "siklar": ["…","…"],
       "dogru": "B", "aciklama": "…", "gorsel": "https://…", "sure": 45 }
   ]
 }
@@ -48,8 +48,9 @@ test-odasi/
 - Zorunlu: `surum` (1), `set_id` (boş olmayan metin), `baslik`, `sorular` (en az 1).
 - Soru: `id` (zorunlu, set içinde benzersiz), `metin` (zorunlu), `siklar` (2–5 boş olmayan metin).
 - İsteğe bağlı: `ders`, `aciklamalari_goster` (varsayılan true), `etiket`, `dogru` (şık sayısına uygun A–E harfi),
-  `aciklama`, `gorsel` (http/https URL ya da `data:image/png|jpeg|gif|webp|svg+xml` veri URI'si; asistan grafiği
+  `aciklama`, `sik_aciklamalari` (`siklar` ile aynı uzunlukta metin dizisi; boş metin olabilir), `gorsel` (http/https URL ya da `data:image/png|jpeg|gif|webp|svg+xml` veri URI'si; asistan grafiği
   SVG veri URI'si olarak sete gömebilir, internet gerekmez; yalnız `<img>` ile gösterilir), `sure` (saniye, 5–600 tam sayı; yalnız Kahoot modunda o sorunun süresini ezer).
+- etiket yalnız ünite/bölüm adıdır (ör. 'Ünite 5'); isteğe bağlı ' | konu' eki yalnız cevap açıldıktan sonra görünür. '|' öncesinde cevaba ipucu verme.
 - Hata iletisi alanı adıyla söyler: `sorular[2].siklar: 2 ile 5 arası şık olmalı (6 var)`. Bütün hatalar bir listede döner.
 - Bozuk JSON için: `JSON okunamadı: <ayrıştırıcı iletisi>`.
 
@@ -95,13 +96,15 @@ Sunucu her bağlantıya **o kişiye özel** bir görünüm üretir. Aşağıdaki
 hiçbir uçtan (HTTP ya da WS) gönderilmez:
 
 - Başkasının şıkkı, güveni, nedeni. (Yalnız "kilitledi / kaç soru işaretledi" bilgisi gider.)
-- `dogru` ve `aciklama` alanları (serbestte `kontrol` ile kilitlenen soru, yalnız kilitleyen kişiye açılır).
+- `dogru`, `aciklama` ve `sik_aciklamalari` alanları (serbestte `kontrol` ile kilitlenen soru, yalnız kilitleyen kişiye açılır).
 
 Açılış anı: Kahoot'ta soru bazında (`acik(i)` evresine geçince yalnız i. ve önceki sorular), serbestte `bitti` evresi.
-`aciklamalari_goster: false` ise `aciklama` hiçbir zaman gönderilmez. Kişinin kendi cevabı kendisine her zaman gider.
+`aciklamalari_goster: false` ise `aciklama` ve `sik_aciklamalari` hiçbir zaman gönderilmez. Kişinin kendi cevabı kendisine her zaman gider.
 Kimlik: her oyuncunun gizli bir `anahtar`ı vardır (rastgele, en az 128 bit); `oyuncuId` herkese açıktır, `anahtar` yalnız sahibine gider.
 
 ## 5. HTTP uçları (JSON)
+
+POST istekleri `Content-Type: application/json` kullanır. HTTP gövdesi ve gelen WebSocket iletisi en çok 1 MiB olabilir. POST ve WebSocket bağlantılarında `Origin` gönderilmişse alan adı ve port `Host` ile eşleşmelidir. Yerel döngü adresleri dışında her IP bir dakikada 10 oda kurma ve toplam 60 oda sorgulama veya katılım isteği gönderebilir. Oyuncunun dördüncü WebSocket bağlantısı en eski bağlantısını kapatır.
 
 | Uç | Gövde | Yanıt |
 | --- | --- | --- |
@@ -127,6 +130,8 @@ Amaç: sohbetteki asistan soru setini kendisi yükler, kullanıcıya link verir,
 | --- | --- | --- |
 | `POST /api/odalar` (asistan odası) | `{ set, mod, soruSuresi, toplamSure, asistan: true }` (`ad` yok) | `{ kod, yonetici, link }` ya da `400 { hatalar }` |
 | `POST /api/odalar/:kod/sonuc` | `{ yonetici }` | aşağıda; yanlış anahtarda `403 { hata }` |
+| `POST /api/odalar/:kod/sorular/bekle` | `{ yonetici, sureMs }` | `{ bitti, sorular }`; ayrıntılar Asistana soru sohbeti bölümünde |
+| `POST /api/odalar/:kod/sorular/yanitla` | `{ yonetici, mesajId, metin }` | `{ tamam: true }`; bilinmeyen mesaj 404 |
 
 - Asistan odasında başlangıçta oyuncu yoktur; asistan oyuncu değildir. **İlk katılan kişi kurucu olur** (Başlat, Sıradaki soru, Şimdi aç onda).
 - `yonetici`: rastgele gizli anahtar (en az 128 bit), yalnız odayı kuran asistana döner; hiçbir oyuncu görünümünde yer almaz.
@@ -142,7 +147,7 @@ Standart girdi/çıktı üzerinden çalışan, ek bağımlılığı olmayan MCP 
 `notifications/initialized`, `ping`, `tools/list`, `tools/call`). stdout'a yalnız protokol iletileri yazılır, günlük stderr'e.
 Test sunucusunun adresi `TEST_ODASI_URL` (varsayılan `http://localhost:3000`). Sunucu yanıt vermiyorsa MCP sunucusu
 `sunucu/sunucu.js`'i ayrık (detached) süreç olarak başlatır ve hazır olmasını bekler.
-Kurduğu odaların `yonetici` anahtarlarını `veri/asistan-odalar.json` dosyasında saklar; araçlar yalnız `kod` ister.
+Kurduğu odaların `yonetici` anahtarlarını `veri/asistan-odalar.json` dosyasında saklar; araçlara yönetici anahtarı vermek gerekmez.
 
 | Araç | Girdi | Ne yapar |
 | --- | --- | --- |
@@ -150,9 +155,13 @@ Kurduğu odaların `yonetici` anahtarlarını `veri/asistan-odalar.json` dosyas�
 | `test_olustur` | `set` (nesne), `mod` (`kahoot` varsayılan / `serbest`), `soruSuresi`, `toplamSure` | Doğrular, odayı kurar; oda kodu ve telefon linkini döner. Hata varsa Türkçe hata listesi (`isError`). |
 | `test_durumu` | `kod` (verilmezse son kurulan oda) | Evre ve kişi kişi ilerleme. |
 | `test_sonucu` | `kod` (verilmezse son kurulan oda) | Bittiyse sonuç metni + soru bazında ayrıntı; bitmediyse durum ve "henüz bitmedi" iletisi. |
+| `soru_bekle` | `kod?`, `sure?` (saniye, 50 varsayılan, en çok 55) | Soruları bağlamıyla bekler; boşsa yeniden çağrılır. |
+| `soru_yanitla` | `kod?`, `mesajId`, `metin` | Oyuncuya özel yanıt ekler. |
+
+`soru_bekle`, `test_sonucu` ve `test_durumu` oyuncu adlarını, gerekçeleri, sohbet geçmişini ve oyuncu metni içeren sonuç özetini ilgili nesnenin `oyuncuVerisi` alanına yerleştirir. Asistan bu alanları soruyu açıklamak için okur. Soru kimliği ve yanıtın gönderileceği `mesajId` ayrı kalır.
 
 Araç açıklamaları Türkçe yazılır ve asistana akışı anlatır: önce şemaya bak, seti üret, `test_olustur`, linki kullanıcıya ver,
-kullanıcı "bitti" deyince `test_sonucu`.
+kullanıcı "bitti" deyince `test_sonucu`; linkten sonra kullanıcı dur diyene dek `soru_bekle` döngüsü sürer, her soru mümkünse ayrı alt ajanda yanıtlanır.
 
 ## 6. WebSocket
 
@@ -170,10 +179,11 @@ Bağlantı: `ws://<host>/ws?kod=..&oyuncuId=..&anahtar=..`. Yanlış kimlikte `{
 | `gonder` | — | serbest, `cozum`; boş sorular olsa da kabul edilir |
 | `sonraki` | — | kahoot, `acik`; kurucu, kurucu bağlı değilse herkes |
 | `simdiAc` | — | serbest, `cozum`; kurucu |
+| `sor` | `soruId, metin` | asistan odası; soru cevabı oyuncuya açılmışsa, 1–500 karakter, en çok 20 oyuncu mesajı |
 
 Sunucu → istemci:
 
-- `{ tur: "hata", ileti }` — Türkçe ileti.
+- `{ tur: "hata", ileti, islem? }` — Türkçe ileti; `islem` hatalı istemci ileti türüdür.
 - `{ tur: "durum", durum }` — her değişiklikte o kişiye özel tam görünüm:
 
 ```js
@@ -198,7 +208,7 @@ durum = {
       benim: { sik: "B", guven: 2, neden: "", kilitli: true } | null,
       acik: false,
       // yalnız acik === true iken:
-      dogru: "B" | null, aciklama: "…" | null,
+      dogru: "B" | null, aciklama: "…" | null, sik_aciklamalari: [..], // varsa; açıklamalar gizliyse ikisi de yok
       cevaplar: [ { oyuncuId, sik: "B" | null, guven: 2 | null, neden: "", dogruMu: true | false | null, puan: 870 } ]
     }
   ]
@@ -230,7 +240,7 @@ Ekranlar:
    Vurgular: **"Hepiniz yanlış"** (2 kişiyse "İkiniz de yanlış"; cevap veren herkes yanlışsa) ve **"emin ama yanlış"** (güven 3 + yanlış).
    "Sonuçları kopyala".
 
-`metin`, `siklar`, `aciklama` içindeki `$…$` ve `$$…$$` KaTeX ile işlenir. Kullanıcıdan ve setten gelen bütün metin
+`metin`, `siklar`, `aciklama`, `sik_aciklamalari` içindeki `$…$` ve `$$…$$` KaTeX ile işlenir. Kullanıcıdan ve setten gelen bütün metin
 `textContent` ile yazılır (HTML olarak asla basılmaz); KaTeX auto-render o düğüm üzerinde çalıştırılır.
 
 ### "Sonuçları kopyala" biçimi (birebir)
@@ -247,3 +257,13 @@ Skor | Mehmet: 5/7 | Ali: 4/7
 - Neden boşsa `, neden: …` yazılmaz. Boş bırakılan cevap: `Mehmet: boş`.
 - `Skor` satırı yalnız `puanli` ise; doğru sayısı / soru sayısı (Kahoot puanı yazılmaz).
 - Sonda fazladan boş satır yok.
+
+## Asistana soru sohbeti
+
+- Yalnız `asistan: true` ile kurulan, `yonetici` anahtarlı odalarda bulunur. `gorunum` üstünde `asistanVar` ve son `soru_bekle` çağrısından itibaren 90 saniye boyunca `asistanBagli` vardır.
+- WS `sor { soruId, metin }`: yalnız oyuncu cevabı gördüyse (Kahoot açılışı, oda sonu veya serbest `kontrol` kilidi). Aksi halde `Önce cevabı gör`; yönetici yoksa `Bu odada asistan yok`. Kırpılmış metin 1–500 karakter, oyuncu/soru başına en çok 20 oyuncu mesajı.
+- Her oyuncunun soru başına `sohbetler` kaydı kalıcıdır: `{ soruId, mesajlar: [{ id, kim: 'oyuncu'|'asistan', metin, an }] }`. Eski odalarda boş kabul edilir. Görünüm yalnız sahibine, yalnız açılan soruda `sohbet` ve `sohbetDurum` verir. Son oyuncu mesajından sonra asistan yanıtı yoksa bekler; 120 saniyelik claim geçerliyse `sohbetDurum: 'yaziyor'`, değilse `null`.
+- `POST /api/odalar/:kod/sorular/bekle { yonetici, sureMs }`: `/sonuc` ile aynı yönetici doğrulaması. Süre 1000–55000 ms (varsayılan 50000); bekleyen, claim edilmemiş soruları hemen, yoksa yeni soru/claim süresi dolunca veya zaman aşımında `{ bitti, sorular }` döndürür. Her öğe `{ mesajId, oyuncu, soru: { id, metin, siklar, dogru, aciklama, sik_aciklamalari }, oyuncuCevabi: { sik, guven, neden }|null, gecmis, metin }`; geçmiş yalnız bu mesajdan önceki aynı kişiye ait soru sohbetidir. Dönen mesajlar 120 saniye claim edilir, yanıt gelmezse yeniden alınabilir. İstek kapanınca, zaman aşımında ve sunucu kapanırken bekleyenler temizlenir.
+- `POST /api/odalar/:kod/sorular/yanitla { yonetici, mesajId, metin }`: 1–4000 karakter yanıt ekler, claim temizler, kaydeder ve yayınlar. Bilinmeyen oyuncu mesajı 404; aynı mesaja tekrar yanıt eklenebilir.
+- MCP `soru_bekle { kod?, sure? }` (saniye, varsayılan 50, üst sınır 55), `soru_yanitla { kod?, mesajId, metin }`. Linkten sonra test boyunca ve bittikten sonra kullanıcı dur diyene dek bekleme sürer. Alt ajan varsa her sorunun tam JSON bağlamı ve mesajId ayrı ajana verilir; ajan yanıtlar ve `soru_yanitla` çağırır, ana ajan hemen yeniden bekler. Alt ajan yoksa sırayla yanıtlanır. Yanıt Türkçe, soruya odaklı ve gerekçeli olur; kod, LaTeX ve vurgu desteklenir.
+- Cevap açıklamasının altında “WickWick'e sor” ikincil düğmesi, okunmamış yanıt noktası (serbest soru ızgarasında da) ve cihazda `testOdasi.` önekli son görülme kaydı bulunur. %85 yüksekliğindeki alt panelde mesajlar, dört başlangıç önerisi, yazıyor/çevrimdışı durumu ve klavye üstünde kalan gönderim alanı vardır. Sohbet yalnız o oyuncuya özeldir.

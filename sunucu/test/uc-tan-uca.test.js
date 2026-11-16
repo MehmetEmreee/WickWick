@@ -74,7 +74,7 @@ for (const mod of ['kahoot','serbest']) test(`HTTP + iki WS: ${mod} tam tur, giz
     assert.deepEqual(adres.veri,{adresler:yerelAdresler(port)});
     assert.deepEqual((await http('/api/dogrula',{set:JSON.stringify(set)})).veri,{tamam:true,soruSayisi:1});
     assert.equal((await http('/api/dogrula',{set:{}})).kod,400);
-    const bozuk=await fetch(`http://127.0.0.1:${port}/api/dogrula`,{method:'POST',body:'{'});
+    const bozuk=await fetch(`http://127.0.0.1:${port}/api/dogrula`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{'});
     assert.equal(bozuk.status,400); assert.match((await bozuk.json()).hatalar[0],/^JSON okunamadı:/);
     const kur=await http('/api/odalar',{set,mod,ad:'Mehmet'}); assert.equal(kur.kod,200);
     const a=kur.veri, kod=a.kod;

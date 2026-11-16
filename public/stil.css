@@ -1,4 +1,4 @@
-/* Test Odası — mobil öncelikli, hafif. Gölge/blur/ağır animasyon yok. */
+/* WickWick — mobil öncelikli, hafif. Gölge/blur/ağır animasyon yok. */
 :root {
   color-scheme: light dark;
   --zemin: #f5f6f8; --yuzey: #ffffff; --yuzey2: #eceef2; --cizgi: #d3d7df;
@@ -117,6 +117,8 @@ textarea { resize: vertical; }
 .hatalar li { margin: 4px 0; }
 
 /* ---- Ana sayfa */
+.marka { display: flex; align-items: center; gap: 10px; }
+.marka img { flex: 0 0 40px; }
 .sayfa-baslik { padding-top: 16px; }
 .sayfa-baslik h1 { font-size: 30px; margin-bottom: 4px; }
 .kod-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
@@ -239,7 +241,7 @@ textarea { resize: vertical; }
 .sik.secili { background: var(--renk); border-color: var(--renk); color: #fff; }
 .sik.secili .rozet { background: #fff; color: var(--renk); }
 .sik:disabled { cursor: default; }
-.sik:disabled:not(.secili):not(.dogru-sik):not(.yanlis-sik) { opacity: .45; }
+.sik:disabled:not(.secili):not(.dogru-sik):not(.yanlis-sik):not(.aciklamali) { opacity: .45; }
 .sik.dogru-sik { background: var(--dogru-zemin); border-color: var(--dogru); color: var(--yazi); }
 .sik.yanlis-sik { background: var(--yanlis-zemin); border-color: var(--yanlis); border-style: dashed; color: var(--yazi); }
 .dogru-sik .sik-isaret { color: var(--dogru); }
@@ -308,6 +310,10 @@ textarea { resize: vertical; }
   font-weight: 700; font-size: 14px; border-radius: 8px; padding: 2px 8px;
 }
 .cevap-neden { margin: 6px 0 0; color: var(--soluk); font-size: 15px; }
+.sik-aciklama { display: block; margin-top: 4px; color: var(--soluk); font-size: 15px; font-weight: 400; text-align: left; }
+.sik-aciklama.belirgin { color: var(--yazi); font-weight: 500; }
+.sik.aciklamali { flex-wrap: wrap; }
+.sik.aciklamali > .sik-aciklama { flex: 1 1 100%; min-width: 0; margin-left: 52px; }
 .aciklama { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--cizgi); }
 .aciklama h3 { margin: 0 0 6px; }
 
@@ -322,7 +328,27 @@ textarea { resize: vertical; }
 .skor-deger { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--soluk); }
 
 .sonuc-ekrani h1 { margin-top: 8px; }
-.acik-ekrani .ust-satir, .bekle-ekrani .ust-satir { margin-top: 4px; }
+.acik-ekrani .ust-satir { margin-top: 4px; }
+
+/* Serbest: gönderim sonrası */
+.bekle-ekrani { padding-top: clamp(40px, 18vh, 150px); }
+.bekle-kart { padding: 28px 20px; background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: var(--yaricap); text-align: center; }
+.bekle-kart > img { display: block; margin: 0 auto 16px; }
+.bekle-kart h1 { margin: 0 0 12px; font-size: 30px; }
+.bekle-sayac { margin-top: 24px; }
+.bekle-sayac .sayac-yazi:empty { display: none; }
+.bekle-ilerleme { display: grid; gap: 20px; text-align: left; }
+.bekle-ilerleme:not(:empty) { margin-top: 28px; }
+.bekle-satir { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.bekle-satir > :first-child { flex: 1; min-width: 0; }
+.bekle-sayi { flex-shrink: 0; color: var(--soluk); font-variant-numeric: tabular-nums; }
+.bekle-iz { height: 5px; border-radius: 4px; overflow: hidden; background: var(--yuzey2); }
+.bekle-cubuk { height: 100%; background: var(--vurgu); }
+.bekle-ilerleme .tamam .bekle-cubuk { background: var(--dogru); }
+.bekle-ilerleme .tamam .bekle-sayi { color: var(--dogru); }
+.bekle-mesaj { margin-top: 28px; }
+.bekle-kurucu { margin-top: 28px; }
+.bekle-kurucu .not { margin: 10px 0 0; font-size: 13px; }
 
 /* Ana eylemler: klavyeyle birlikte normal akışta kalır. */
 main:has(.alt-eylemler) {
@@ -342,3 +368,34 @@ main:has(.alt-eylemler) > .oda-govde,
   border-top: 1px solid var(--cizgi);
 }
 .alt-eylemler .dugme.buyuk { margin: 0; }
+
+.gonder-alani .dugme { scroll-margin-bottom: calc(90px + env(safe-area-inset-bottom)); }
+
+/* ---- WickWick'e sor */
+.sohbet-giris { width: auto; min-height: 44px; padding: 8px 12px; margin: 12px 0; font-size: 15px; }
+.okunmamis { position: relative; }
+.okunmamis::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--vurgu); }
+.nokta.okunmamis::after { position: absolute; top: 4px; right: 4px; border: 1px solid var(--yuzey); }
+.sohbet-katman { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .5); display: flex; align-items: flex-end; justify-content: center; }
+.sohbet-panel { display: flex; flex-direction: column; width: 100%; max-width: 600px; height: 85%; min-height: 0; overflow: hidden; border-radius: 20px 20px 0 0; background: var(--zemin); transform: translateY(100%); transition: transform .2s ease-out; }
+.sohbet-katman.acildi .sohbet-panel { transform: translateY(0); }
+.sohbet-baslik { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--cizgi); }
+.sohbet-baslik h2 { margin: 0; font-size: 17px; }
+.sohbet-baslik .dugme { width: auto; min-height: 44px; padding: 8px 12px; }
+.sohbet-mesajlar { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+.sohbet-icerik { display: grid; gap: 12px; }
+.sohbet-satir { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.sohbet-satir.oyuncu { justify-content: flex-end; }
+.sohbet-avatar { width: 26px; height: 26px; flex: 0 0 26px; }
+.sohbet-baloncuk { min-width: 0; max-width: calc(100% - 32px); padding: 10px 12px; border-radius: 14px; background: var(--yuzey2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.oyuncu .sohbet-baloncuk { background: var(--vurgu); color: var(--vurgu-yazi); }
+.sohbet-baloncuk .kod-blok { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sohbet-ipucu { margin: 8px 16px 0; }
+.sohbet-oneriler { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px; }
+.sohbet-oneriler .dugme { width: auto; min-height: 44px; padding: 8px 10px; font-size: 14px; }
+.sohbet-form { flex-shrink: 0; padding: 0 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--cizgi); background: var(--zemin); }
+.sohbet-durum { min-height: 22px; font-size: 13px; margin: 6px 0; }
+.sohbet-yaz { display: flex; align-items: flex-end; gap: 8px; }
+.sohbet-yaz textarea { flex: 1; min-width: 0; min-height: 48px; max-height: 120px; resize: none; line-height: 24px; padding: 10px; }
+.sohbet-yaz .dugme { width: auto; min-height: 48px; padding: 10px 12px; }
+@media (prefers-reduced-motion: reduce) { .sohbet-panel { transition: none; } }

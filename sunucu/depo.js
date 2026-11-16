@@ -5,8 +5,18 @@ export function depoAc(dosya, gecikme = 80) {
   let zamanlayici, bekleyen, zincir = Promise.resolve();
   async function oku(simdi = Date.now()) {
     let veri;
-    try { veri = JSON.parse(await readFile(dosya, 'utf8')); }
+    let metin;
+    try { metin = await readFile(dosya, 'utf8'); }
     catch (e) { if (e.code === 'ENOENT') return new Map(); throw e; }
+    try {
+      veri = JSON.parse(metin);
+      if (!Array.isArray(veri)) throw new Error('Oda verisi dizi olmalı');
+    } catch {
+      const yedek = `${dosya}.bozuk-${Date.now()}`;
+      await rename(dosya, yedek);
+      console.error(`Bozuk oda verisi ${yedek} olarak saklandı; boş depo açıldı`);
+      return new Map();
+    }
     return new Map(veri.filter(o => simdi - Date.parse(o.tarih) <= 90 * 86400000).map(o => {
       o.zamanlayici = null;
       for (const p of o.oyuncular) p.baglantilar = new Set();
@@ -14,15 +24,15 @@ export function depoAc(dosya, gecikme = 80) {
     }));
   }
   function kaydet(odalar) {
-    // Anlık, bağlantı ve zamanlayıcı içermeyen kopya; yazmalar sırayla atomik yapılır.
-    bekleyen = JSON.stringify([...odalar.values()], (k, v) => ['zamanlayici', 'baglantilar'].includes(k) ? undefined : v);
+    // Seri hale getirme yalnız toplu boşaltmada yapılır.
+    bekleyen = odalar;
     clearTimeout(zamanlayici);
     zamanlayici = setTimeout(() => bosalt().catch(e => console.error('Depo yazılamadı:', e.message)), gecikme);
   }
   async function bosalt() {
     clearTimeout(zamanlayici);
     if (bekleyen !== undefined) {
-      const veri = bekleyen;
+      const veri = JSON.stringify([...bekleyen.values()], (k, v) => ['zamanlayici', 'baglantilar'].includes(k) ? undefined : v);
       bekleyen = undefined;
       zincir = zincir.catch(() => {}).then(async () => {
         await mkdir(dirname(dosya), { recursive: true });

@@ -2,3 +2,6 @@
 import './mantik.test.js';
 import './uc-tan-uca.test.js';
 import './asistan.test.js';
+import './sohbet.test.js';
+import './aciklama.test.js';
+import './guvenlik.test.js';

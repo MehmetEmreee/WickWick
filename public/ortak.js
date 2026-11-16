@@ -126,7 +126,7 @@ export function mat(dugum) {
   if (dugum.textContent.includes('$')) {
     katexYukle().then(() => {
       if (!window.renderMathInElement) return;
-      window.renderMathInElement(dugum, { delimiters: AYRACLAR, throwOnError: false });
+      window.renderMathInElement(dugum, { delimiters: AYRACLAR, throwOnError: false, maxSize: 20, maxExpand: 200 });
       olc(dugum);
     });
   }
@@ -161,6 +161,7 @@ function kodBlogu(kod) {
 }
 // Metni güvenle yazan, sonra KaTeX uygulayan düğüm.
 export function matDugum(etiket, sinif, metin) {
+  if (metin.length > 20000) return el(etiket, { class: `mat ${sinif}`, text: metin });
   const parcalar = metinParcalari(metin, sinif === 'soru-metin');
   const kodVar = parcalar.some((p) => p.tur === 'kod');
   const sik = sinif === 'sik-metin' || sinif === 'ss-metin';

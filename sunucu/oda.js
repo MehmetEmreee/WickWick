@@ -16,12 +16,20 @@ export function odaKur({ set, mod, soruSuresi = 30, toplamSure = 0, ad, asistan 
   if (!['kahoot', 'serbest'].includes(mod)) throw new Error('mod: kahoot veya serbest olmalı');
   if (!Number.isInteger(soruSuresi) || soruSuresi < 5 || soruSuresi > 600) throw new Error('soruSuresi: 5–600 arası tam sayı olmalı');
   if (!Number.isInteger(toplamSure) || toplamSure < 0 || toplamSure * 60000 > 2147483647) throw new Error('toplamSure: 0–35791 arası tam sayı olmalı');
-  let kod;
-  if (odalar.size >= 90000) throw new Error('Oda kodları tükendi');
-  do { kod = String(randomInt(10000, 100000)); } while (odalar.has(kod));
-  const oda = { kod, set, mod, soruSuresi, toplamSure, tarih: new Date(simdi).toISOString(), evre: 'lobi', sira: null, bitis: null, sureMs: null, baslangic: null, oyuncular: [], zamanlayici: null };
+  const oda = { set, mod, soruSuresi, toplamSure, tarih: new Date(simdi).toISOString(), evre: 'lobi', sira: null, bitis: null, sureMs: null, baslangic: null, oyuncular: [], zamanlayici: null };
   if (asistan === true) oda.yonetici = randomBytes(24).toString('hex');
   else oyuncuEkle(oda, ad);
+  if (odalar.size >= 300) {
+    const bitenler = [...odalar.values()].filter(o => o.evre === 'bitti').sort((a, b) => Date.parse(a.tarih) - Date.parse(b.tarih));
+    const gereken = odalar.size - 299;
+    if (bitenler.length < gereken) throw new Error('En çok 300 oda açık olabilir; yeterli bitmiş oda yok');
+    for (const eski of bitenler.slice(0, gereken)) {
+      clearTimeout(eski.zamanlayici);
+      for (const p of eski.oyuncular) for (const ws of p.baglantilar) ws.close(1001, 'Eski oda kaldırıldı');
+      odalar.delete(eski.kod);
+    }
+  }
+  do { oda.kod = String(randomInt(10000, 100000)); } while (odalar.has(oda.kod));
   return oda;
 }
 
@@ -75,6 +83,16 @@ export function islem(oda, p, m, simdi = Date.now()) {
     if (kilit) c.puan = puan(s, c, oda.sureMs, oda.baslangic);
     p.cevaplar[s.id] = c;
     if (kilit && oda.oyuncular.every(p => p.cevaplar[s.id]?.kilitli)) ac(oda);
+  } else if (m.tur === 'sor') {
+    gerek(oda.yonetici, 'Bu odada asistan yok');
+    const i = oda.set.sorular.findIndex(s => s.id === m.soruId);
+    gerek(i >= 0 && (acildi(oda, i) || (oda.mod === 'serbest' && p.cevaplar[m.soruId]?.kilitli)), 'Önce cevabı gör');
+    const metin = sohbetMetni(m.metin, 500);
+    p.sohbetler ??= [];
+    let sohbet = p.sohbetler.find(s => s.soruId === m.soruId);
+    if (!sohbet) { sohbet = { soruId: m.soruId, mesajlar: [] }; p.sohbetler.push(sohbet); }
+    gerek(sohbet.mesajlar.filter(m => m.kim === 'oyuncu').length < 20, 'Bu soruda en çok 20 mesaj gönderebilirsin');
+    sohbet.mesajlar.push({ id: randomUUID(), kim: 'oyuncu', metin, an: simdi });
   } else if (m.tur === 'konum') {
     gerek(oda.mod === 'serbest' && oda.evre !== 'lobi' && Number.isInteger(m.sira) && m.sira >= 0 && m.sira < oda.set.sorular.length, 'sira: geçersiz konum');
     p.konum = m.sira;
@@ -86,8 +104,7 @@ export function islem(oda, p, m, simdi = Date.now()) {
     p.cevaplar[s.id] = { sik: null, guven: null, neden: '', an: simdi, ...p.cevaplar[s.id], kilitli: true };
   } else if (m.tur === 'gonder') {
     gerek(oda.mod === 'serbest' && oda.evre === 'cozum' && !p.gonderdi, 'Şimdi gönderilemez');
-    p.gonderdi = true;
-    for (const c of Object.values(p.cevaplar)) c.kilitli = true;
+    p.gonderdi = true; // Taslakları zaten kilitler; kilitli yalnız kontrol edilen sorularda kalır.
     if (oda.oyuncular.every(p => p.gonderdi)) ac(oda);
   } else if (m.tur === 'sonraki') {
     gerek(oda.mod === 'kahoot' && oda.evre === 'acik' && (p.kurucu || !oda.oyuncular.find(p => p.kurucu)?.baglantilar.size), 'Şimdi sıradaki soruya geçilemez');
@@ -131,6 +148,7 @@ export function gorunum(oda, oyuncuId, simdi = Date.now()) {
     return a;
   }, { puan: 0, dogruSayisi: 0 });
   return {
+    asistanVar: !!oda.yonetici, asistanBagli: asistanBagli(oda, simdi),
     sunucuSaat: simdi, kod: oda.kod, mod: oda.mod, evre: oda.evre,
     set: { set_id: oda.set.set_id, baslik: oda.set.baslik, ders: oda.set.ders, soruSayisi: oda.set.sorular.length },
     soruSuresi: oda.soruSuresi, toplamSure: oda.toplamSure,
@@ -141,13 +159,25 @@ export function gorunum(oda, oyuncuId, simdi = Date.now()) {
       if (oda.evre === 'lobi' || (oda.mod === 'kahoot' && i > oda.sira)) return [];
       const c = ben.cevaplar[s.id];
       const soru = { id: s.id, sira: i, etiket: s.etiket, metin: s.metin, siklar: [...s.siklar], gorsel: s.gorsel, benim: c ? { sik: c.sik, guven: c.guven, neden: c.neden, kilitli: c.kilitli } : null, acik: acildi(oda, i) };
+      if (!soru.acik && !(oda.mod === 'serbest' && c?.kilitli)) soru.etiket = s.etiket?.split('|')[0].trim();
       if (!soru.acik && oda.mod === 'serbest' && c?.kilitli) {
         soru.dogru = s.dogru ?? null;
-        if (oda.set.aciklamalari_goster !== false) soru.aciklama = s.aciklama ?? null;
+        if (oda.set.aciklamalari_goster !== false) {
+          soru.aciklama = s.aciklama ?? null;
+          if (s.sik_aciklamalari !== undefined) soru.sik_aciklamalari = [...s.sik_aciklamalari];
+        }
+      }
+      if (soru.acik || (oda.mod === 'serbest' && c?.kilitli)) {
+        soru.sohbet = ben.sohbetler?.find(t => t.soruId === s.id)?.mesajlar.map(m => ({ ...m })) ?? [];
+        const son = soru.sohbet.at(-1);
+        soru.sohbetDurum = son?.kim === 'oyuncu' && oda.sohbetHaklari?.[son.id] > simdi ? 'yaziyor' : null;
       }
       if (soru.acik) {
         soru.dogru = s.dogru ?? null;
-        if (oda.set.aciklamalari_goster !== false) soru.aciklama = s.aciklama ?? null;
+        if (oda.set.aciklamalari_goster !== false) {
+          soru.aciklama = s.aciklama ?? null;
+          if (s.sik_aciklamalari !== undefined) soru.sik_aciklamalari = [...s.sik_aciklamalari];
+        }
         soru.cevaplar = oda.oyuncular.map(p => {
           const c = tamam(p.cevaplar[s.id]) ? p.cevaplar[s.id] : null;
           return { oyuncuId: p.id, sik: c?.sik ?? null, guven: c?.guven ?? null, neden: c?.neden ?? '', dogruMu: s.dogru ? c?.sik === s.dogru : null, puan: oda.mod === 'kahoot' ? c?.puan ?? 0 : 0 };
@@ -156,4 +186,43 @@ export function gorunum(oda, oyuncuId, simdi = Date.now()) {
       return [soru];
     })
   };
+}
+
+export function sohbetMetni(metin, sinir) {
+  if (typeof metin !== 'string' || !metin.trim() || metin.trim().length > sinir) throw new Error(`metin: 1–${sinir} karakter olmalı`);
+  return metin.trim();
+}
+export const asistanBagli = (oda, simdi = Date.now()) => oda.asistanSonAn != null && simdi < oda.asistanSonAn + 90000;
+
+export function bekleyenSorular(oda, simdi = Date.now()) {
+  const sorular = [];
+  for (const p of oda.oyuncular) for (const t of p.sohbetler ?? []) {
+    const sonYanit = t.mesajlar.findLastIndex(m => m.kim === 'asistan');
+    t.mesajlar.forEach((m, i) => {
+      if (m.kim !== 'oyuncu' || i < sonYanit || oda.sohbetHaklari?.[m.id] > simdi) return;
+      const s = oda.set.sorular.find(s => s.id === t.soruId), c = p.cevaplar[t.soruId];
+      sorular.push({ mesajId: m.id, oyuncu: p.ad,
+        soru: { id: s.id, metin: s.metin, siklar: [...s.siklar], dogru: s.dogru ?? null, aciklama: s.aciklama ?? null, sik_aciklamalari: s.sik_aciklamalari ?? null },
+        oyuncuCevabi: c ? { sik: c.sik, guven: c.guven, neden: c.neden } : null,
+        gecmis: t.mesajlar.slice(0, i).map(m => ({ ...m })), metin: m.metin });
+    });
+  }
+  return sorular;
+}
+export function sorulariAl(oda, simdi = Date.now()) {
+  const sorular = bekleyenSorular(oda, simdi);
+  oda.sohbetHaklari ??= {};
+  for (const s of sorular) oda.sohbetHaklari[s.mesajId] = simdi + 120000;
+  return { bitti: oda.evre === 'bitti', sorular };
+}
+export function soruYanitla(oda, mesajId, metin, simdi = Date.now()) {
+  metin = sohbetMetni(metin, 4000);
+  for (const p of oda.oyuncular) for (const t of p.sohbetler ?? []) {
+    if (!t.mesajlar.some(m => m.id === mesajId && m.kim === 'oyuncu')) continue;
+    t.mesajlar.push({ id: randomUUID(), kim: 'asistan', metin, an: simdi });
+    // Bu yanıt, dizide kendisinden önceki oyuncu mesajlarını da yanıtlamış olur.
+    for (const m of t.mesajlar) if (oda.sohbetHaklari) delete oda.sohbetHaklari[m.id];
+    return;
+  }
+  throw Object.assign(new Error('Mesaj bulunamadı'), { durum: 404 });
 }

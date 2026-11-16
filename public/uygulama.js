@@ -12,7 +12,7 @@ function goster(...dugumler) {
 function yonlendir() {
   const parca = location.hash.replace(/^#\/?/, '').split('/');
   odaKapat();
-  document.title = 'Test Odası';
+  document.title = 'WickWick';
   if (parca[0] === 'yeni') return yeniEkrani();
   if (parca[0] === 'oda' && /^\d{5}$/.test(parca[1] || '')) return odaAc(kok, parca[1]);
   anaSayfa();
@@ -43,7 +43,7 @@ function anaSayfa() {
   const devam = el('div', { class: 'devam-alani', hidden: !depo.odalar().length });
   goster(
     el('header', { class: 'sayfa-baslik' },
-      el('h1', { text: 'Test Odası' })),
+      el('h1', { class: 'marka' }, el('img', { src: '/logo.svg', alt: '', width: 40, height: 40 }), 'WickWick')),
     devam,
     el('section', { class: 'kart' }, el('h2', { text: 'Koda katıl' }), form, hata),
     el('a', { href: '#/yeni', class: 'dugme', text: 'Yeni test' }),

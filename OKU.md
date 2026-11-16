@@ -1,4 +1,4 @@
-# Test Odası
+# WickWick
 
 Node.js 22 veya üstü gerekir. Proje klasöründe:
 
@@ -15,7 +15,7 @@ Bilgisayarda `http://localhost:3000` adresini açın. Telefonları aynı yerel a
 
 “Geçerli JSON üret: `surum: 1`, boş olmayan `set_id` ve `baslik`, isteğe bağlı `ders`, `aciklamalari_goster` (varsayılan true), en az bir elemanlı `sorular`. Her soruda benzersiz ve boş olmayan `id`, `metin`, 2–5 boş olmayan metinden oluşan `siklar` olsun. İsteğe bağlı alanlar: `etiket`, şıklara uygun `dogru` (A–E), `aciklama`, `gorsel`, `sure`. `gorsel` yalnız http/https URL veya `data:image/png`, `jpeg`, `gif`, `webp`, `svg+xml` veri URI’si olsun. SVG’yi base64 ya da URI kodlamasıyla göm; beyaz arka plan ve okunur eksen adları kullan. `sure` 5–600 arası tam sayı saniyedir ve Kahoot’ta oda süresini o soru için ezer. Metin, şık ve açıklamalarda satır içi `$…$` veya blok `$$…$$` LaTeX kullanılabilir; JSON içinde ters eğik çizgileri çift yaz (`\\frac`). Doğru şık ve açıklamaları içerik açısından doğrula.”
 
-Örnek: `ornek/modul3_soru_seti.json` ve görsel sınaması için `ornek/gorsel_latex_test.json`. İçe aktarma gövdesi en çok 5 MiB olabilir. Kahoot varsayılan soru süresi 30 saniye; serbest modda `toplamSure` dakika, 0 süresizdir.
+Örnek: `ornek/modul3_soru_seti.json` ve görsel sınaması için `ornek/gorsel_latex_test.json`. İçe aktarma gövdesi en çok 1 MiB olabilir. Kahoot varsayılan soru süresi 30 saniye; serbest modda `toplamSure` dakika, 0 süresizdir.
 
 ```sh
 npm test

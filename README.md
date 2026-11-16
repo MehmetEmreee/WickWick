@@ -1,4 +1,4 @@
-# 📱 Test Odası
+# 📱 WickWick
 
 **Arkadaşlarınla aynı soru setini, herkes kendi telefonundan çözsün.**
 Yerel ağda çalışan, hesap istemeyen, tamamen Türkçe bir canlı test uygulaması. Sorularınızı JSON olarak yükleyin ya da asistanınıza (Claude, Codex) hazırlatın; oda linkini paylaşın, birlikte çözün, sonuçları birlikte tartışın.
@@ -21,6 +21,7 @@ Yerel ağda çalışan, hesap istemeyen, tamamen Türkçe bir canlı test uygula
 - **Kod gösterimi** — ` ```cpp ` çitli bloklar temalı, sözdizimi renkli kod kutusunda; `satır içi kod` ise küçük bir etiket olarak çizilir. Ters tırnaksız eski setlerdeki kod da sezgisel olarak algılanır. `<b>`, `<i>`, `<u>` vurgu olur; başka HTML metin olarak görünür.
 - **Mobil odaklı arayüz** — açılıp kapanan soru numarası ızgarası, yapışkan alt eylem çubuğu, durum rozetleri, sade lobi, ana sayfada “Devam et” kartı ve gerekçe için “+ Not ekle”.
 - **Kalıcı odalar** — odalar diske atomik yazılır; sunucu yeniden başlasa da süreler kaldığı yerden devam eder.
+- **WickWick’e sor** — asistan odalarında cevabı gördükten sonra açıklamanın altından özel soru sohbetini açın. Yanıt canlı gelir; okunmamış yanıt noktası ve çevrimdışı durumu gösterilir. Asistan `soru_bekle` ile bekler, `soru_yanitla` ile yanıtlar; kullanıcı dur diyene dek test sonrasında da devam eder.
 - **Asistan entegrasyonu (MCP)** — “Beni şu konudan 8 soruyla sına” deyin; asistan soruları üretir, odayı kurar, linki verir ve test bitince sonuçlarınızı yorumlar.
 - **Sade yapı** — çerçeve yok, derleyici yok. Düz HTML + CSS + ES modülleri ve Node.js.
 
@@ -67,11 +68,12 @@ Port değiştirmek için `PORT=3001 npm start`. macOS güvenlik duvarı sorarsa 
   "sorular": [
     {
       "id": "S1",
-      "etiket": "Kolay",
+      "etiket": "Ünite 5",
       "metin": "$\\{2, 4, 4, 7\\}$ kümesinin modu nedir?",
       "siklar": ["2", "4", "4.25", "7"],
       "dogru": "B",
       "aciklama": "En sık tekrar eden değer 4'tür.",
+      "sik_aciklamalari": ["2 yalnız bir kez geçer.", "4 iki kez geçer; en sık değer olduğu için moddur.", "4.25 aritmetik ortalamadır, mod değildir.", "7 en büyük değerdir, en sık değer değildir."],
       "sure": 45
     }
   ]
@@ -86,7 +88,9 @@ Port değiştirmek için `PORT=3001 npm start`. macOS güvenlik duvarı sorarsa 
 | `sorular[].id`, `metin` | ✅ | `id` set içinde benzersiz |
 | `sorular[].siklar` | ✅ | 2–5 boş olmayan metin |
 | `dogru` | — | Şık sayısına uygun A–E harfi |
-| `aciklama`, `etiket` | — | Açılışta gösterilir |
+| `aciklama` | — | Cevap açılınca gösterilir |
+| `etiket` | — | Ünite/bölüm adı (ör. `Ünite 5`); isteğe bağlı ` \| konu` eki yalnız cevap açılınca gösterilir. `\|` öncesi cevaba ipucu içermez. |
+| `sik_aciklamalari` | — | `siklar` ile aynı uzunlukta metin dizisi; boş metin olabilir. Genel açıklamayla birlikte açılır; `aciklamalari_goster: false` ikisini de gizler. |
 | `gorsel` | — | http/https URL ya da `data:image/...` veri URI'si |
 | `sure` | — | 5–600 saniye; Kahoot'ta o sorunun süresini ezer |
 
@@ -104,6 +108,12 @@ Proje, Node.js 22+ ile ek bağımlılık gerektirmeyen bir stdio MCP sunucusu i�
 | `test_olustur` | Seti yükler, odayı kurar, telefon linkini döner |
 | `test_durumu` | Evre ve ilerleme bilgisini verir |
 | `test_sonucu` | Test bitince sonuçları okur |
+| `soru_bekle` | Özel oyuncu sorularını bağlamıyla bekler (`kod?`, `sure?`: en çok 55 sn) |
+| `soru_yanitla` | `mesajId` ve `metin` ile yanıt gönderir (`kod?`) |
+
+`test_olustur`, oda kurmadan önce görünür açıklamaları denetler: `aciklama` en az 120 karakter, her şık açıklaması en az 30 karakter ve aynı soruda birbirinden farklı olmalı; `aciklamasiz: true` yalnız kullanıcı açıkça açıklamasız test veya gizleme istediğinde bu denetimi atlar (uygulamaya yapıştırma ve `/api/dogrula` değişmez).
+
+Linkten sonra asistan, kullanıcı dur diyene dek `soru_bekle` döngüsünü sürdürür; alt ajan varsa her soruyu ayrı ajana verip paralel yanıtlatır. Sohbet protokolü: WS `sor { soruId, metin }`; yönetici anahtarıyla `POST /api/odalar/:kod/sorular/bekle` ve `POST /api/odalar/:kod/sorular/yanitla` (ayrıntılar [şartnamede](SARTNAME.md#asistana-soru-sohbeti)).
 
 **Claude Code**
 
@@ -171,3 +181,7 @@ Testler geçici dizin kullanır; `veri/` klasörüne dokunmaz.
 - Her oyuncunun gizli bir kimlik anahtarı vardır; anahtarı bilen o oyuncu adına erişebilir, paylaşmayın.
 - Çalışma verisi (`veri/`) depoya eklenmez.
 - 90 günden eski odalar açılışta otomatik silinir.
+- Sunucu en çok 300 oda tutar. Yeni odaya yer gerektiğinde en eski bitmiş oda kaldırılır. Bozuk oda dosyası zaman damgalı bir yedeğe taşınır.
+- HTTP gövdeleri ve gelen WebSocket iletileri 1 MiB ile sınırlıdır. POST istekleri JSON kullanır. Tarayıcının gönderdiği kaynak, HTTP POST ve WebSocket bağlantılarında sunucunun alan adı ve portuyla eşleşmelidir.
+- Yerel döngü adresleri dışında her IP bir dakikada en çok 10 oda kurma ve toplam 60 oda sorgulama veya katılım isteği gönderebilir. Oyuncu başına üç eşzamanlı bağlantı desteklenir.
+- Asistan araçları oyuncuların adlarını, gerekçelerini ve sohbet metinlerini `oyuncuVerisi` alanında taşır. Asistan bu metinleri soruyu açıklamak için kullanır.
