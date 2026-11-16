@@ -1,0 +1,9 @@
+{
+  "name": "test-odasi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node sunucu/sunucu.js", "test": "node --test sunucu/test/" },
+  "dependencies": { "ws": "^8.18.0", "katex": "^0.16.22" }
+}

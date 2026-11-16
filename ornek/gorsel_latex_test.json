@@ -1,0 +1,131 @@
+{
+  "surum": 1,
+  "set_id": "gorsel-latex-test",
+  "baslik": "Görsel ve LaTeX sınama seti",
+  "ders": "Matematik ve İstatistik",
+  "aciklamalari_goster": true,
+  "sorular": [
+    {
+      "id": "G1",
+      "metin": "$\\bar x=\\frac{\\sum_{i=1}^{n}x_i}{n}$ için 2, 4, 6 verilerinin ortalaması kaçtır?",
+      "siklar": [
+        "2",
+        "3",
+        "4",
+        "6"
+      ],
+      "dogru": "C",
+      "aciklama": "Toplam 12, gözlem sayısı 3; ortalama 4."
+    },
+    {
+      "id": "G2",
+      "metin": "Aşağıdaki dört değer sırasıyla kaçtır? $$\\frac{6}{3},\\quad\\sum_{i=1}^{3}i,\\quad\\int_0^1 2x\\,dx,\\quad\\det\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}$$",
+      "siklar": [
+        "2, 6, 1, −2",
+        "3, 6, 2, −2",
+        "2, 3, 1, 2",
+        "2, 6, 0, 2"
+      ],
+      "dogru": "A",
+      "aciklama": "Kesir 2, toplam 6, integral $[x^2]_0^1=1$, determinant $4-6=-2$ olur.",
+      "sure": 60
+    },
+    {
+      "id": "G3",
+      "metin": "$\\sqrt{8}$ ifadesine eşit olan şık hangisidir?",
+      "siklar": [
+        "$\\frac{8}{2}$",
+        "$2\\sqrt{2}$",
+        "$\\sqrt{2}$",
+        "$\\frac{\\sqrt{2}}{2}$"
+      ],
+      "dogru": "B",
+      "aciklama": "$\\sqrt{8}=\\sqrt{4\\cdot2}=2\\sqrt2$."
+    },
+    {
+      "id": "G4",
+      "metin": "Bu uzun özdeşlikte sağdaki ifadenin değeri kaçtır? $\\underbrace{\\frac{1}{2}+\\frac{1}{4}+\\frac{1}{8}+\\frac{1}{16}+\\frac{1}{32}+\\frac{1}{64}+\\frac{1}{128}+\\frac{1}{256}+\\frac{1}{512}+\\frac{1}{1024}+\\frac{1}{2048}+\\frac{1}{4096}+\\frac{1}{8192}+\\frac{1}{16384}+\\frac{1}{32768}+\\frac{1}{65536}}_{\\sum_{k=1}^{16}2^{-k}}=1-2^{-16}$",
+      "siklar": [
+        "$\\frac{65535}{65536}$",
+        "$1$",
+        "$\\frac{1}{65536}$"
+      ],
+      "dogru": "A",
+      "aciklama": "Sonlu geometrik toplam 1 eksi son paydanın tersidir."
+    },
+    {
+      "id": "G5",
+      "metin": "Grafiğe göre B makinesi A makinesinden kaç fazla parça üretmiştir?",
+      "siklar": [
+        "5",
+        "10",
+        "15",
+        "20"
+      ],
+      "dogru": "B",
+      "aciklama": "B: 20, A: 10; fark 10 parçadır.",
+      "gorsel": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NDAiIGhlaWdodD0iMzYwIiB2aWV3Qm94PSIwIDAgNjQwIDM2MCI+PHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIzNjAiIGZpbGw9IndoaXRlIi8+PGcgZmlsbD0iIzExMSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPjx0ZXh0IHg9IjMwIiB5PSIzMCI+w5xyZXRpbGVuIHBhcsOnYSBzYXnEsXPEsTwvdGV4dD48cGF0aCBkPSJNNzAgNjBWMjkwSDYwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTExIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzOCIgeT0iMjk1Ij4wPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIxOTUiPjEwPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSI5NSI+MjA8L3RleHQ+PHBhdGggZD0iTTY1IDE5MEg2MDAgTTY1IDkwSDYwMCIgc3Ryb2tlPSIjZGRkIi8+PHJlY3QgeD0iMTMwIiB5PSIxOTAiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMxNjcyYzQiLz48cmVjdCB4PSIyODUiIHk9IjkwIiB3aWR0aD0iNzAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMTY3MmM0Ii8+PHJlY3QgeD0iNDQwIiB5PSIxNDAiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiMxNjcyYzQiLz48dGV4dCB4PSIxNTgiIHk9IjMyMCI+QTwvdGV4dD48dGV4dCB4PSIzMTIiIHk9IjMyMCI+QjwvdGV4dD48dGV4dCB4PSI0NjciIHk9IjMyMCI+QzwvdGV4dD48dGV4dCB4PSI0NjUiIHk9IjM1MCI+TWFraW5lPC90ZXh0PjwvZz48L3N2Zz4="
+    },
+    {
+      "id": "G6",
+      "metin": "Çizgi grafiğine göre 1. saatten 3. saate sıcaklık kaç °C artmıştır?",
+      "siklar": [
+        "5",
+        "10",
+        "15",
+        "25"
+      ],
+      "dogru": "C",
+      "aciklama": "İlk saat 10 °C, üçüncü saat 25 °C; artış 15 °C.",
+      "gorsel": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NDAiIGhlaWdodD0iMzYwIiB2aWV3Qm94PSIwIDAgNjQwIDM2MCI+PHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIzNjAiIGZpbGw9IndoaXRlIi8+PGcgZmlsbD0iIzExMSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPjx0ZXh0IHg9IjMwIiB5PSIzMCI+U8SxY2FrbMSxayAowrBDKTwvdGV4dD48cGF0aCBkPSJNNzAgNjBWMjkwSDYwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTExIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzOCIgeT0iMjk1Ij4wPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIyMTUiPjEwPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIxMzUiPjIwPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSI1NSI+MzA8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iMTMwLDIxMCAyOTAsMTMwIDQ1MCw5MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzAyMDIwIiBzdHJva2Utd2lkdGg9IjQiLz48Y2lyY2xlIGN4PSIxMzAiIGN5PSIyMTAiIHI9IjUiLz48Y2lyY2xlIGN4PSIyOTAiIGN5PSIxMzAiIHI9IjUiLz48Y2lyY2xlIGN4PSI0NTAiIGN5PSI5MCIgcj0iNSIvPjx0ZXh0IHg9IjEyMCIgeT0iMzIwIj4xPC90ZXh0Pjx0ZXh0IHg9IjI4MCIgeT0iMzIwIj4yPC90ZXh0Pjx0ZXh0IHg9IjQ0MCIgeT0iMzIwIj4zPC90ZXh0Pjx0ZXh0IHg9IjQ5MCIgeT0iMzUwIj5TYWF0PC90ZXh0PjwvZz48L3N2Zz4="
+    },
+    {
+      "id": "G7",
+      "metin": "Normal dağılımın olasılık yoğunluk eğrisinin altında kalan toplam alan kaçtır?",
+      "siklar": [
+        "0",
+        "0,5",
+        "1",
+        "Standart sapmaya bağlıdır"
+      ],
+      "dogru": "C",
+      "aciklama": "Her olasılık yoğunluğunun tüm gerçek sayılar üzerindeki integrali 1 olur.",
+      "gorsel": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Normal_Distribution_PDF.svg/960px-Normal_Distribution_PDF.svg.png"
+    },
+    {
+      "id": "G8",
+      "metin": "Aykırı büyük bir gözlem eklenmesinin etkisini en doğru açıklayan uzun ifade hangisidir?",
+      "siklar": [
+        "Aritmetik ortalama bütün gözlemlerin toplamını kullandığından aykırı büyük gözlem onu yukarı çekebilir; medyan sıralamadaki orta konuma dayandığından genellikle daha dirençlidir.",
+        "Aritmetik ortalama yalnız ortadaki gözleme bağlıdır; bu nedenle çok büyük bir gözlem eklemek ortalamayı hiçbir veri kümesinde değiştiremez ve medyan her zaman en büyük değere eşit olur.",
+        "Medyan bütün gözlemleri önce toplar sonra gözlem sayısına böler; bu yüzden her yeni gözlem medyanı aynı miktarda artırır ve aritmetik ortalama daima sabit kalır.",
+        "Mod her durumda tek bir değer olmak zorundadır; bütün gözlemler farklı olsa bile en büyük gözlem mod seçilir ve bu seçim ortalamayı da otomatik olarak belirler.",
+        "Aykırı gözlemler herhangi bir merkezi eğilim ölçüsünü değiştiremez; çünkü ortalama, medyan ve mod yalnız örneklem büyüklüğünü dikkate alır ve gözlem değerlerini kullanmaz."
+      ],
+      "dogru": "A",
+      "aciklama": "Ortalama uç değerlere duyarlıdır. Medyan daha dirençlidir; hiç değişmeyeceği iddia edilmez."
+    },
+    {
+      "id": "G9",
+      "metin": "Doğru mu yanlış mı: Bir veri kümesinin birden fazla modu olabilir.",
+      "siklar": [
+        "Doğru",
+        "Yanlış"
+      ],
+      "dogru": "A",
+      "aciklama": "En yüksek frekansı birden fazla değer paylaşabilir."
+    },
+    {
+      "id": "G10",
+      "metin": "2, 4, 6 için anakütle varyansı kaçtır?",
+      "siklar": [
+        "$\\frac{8}{3}$",
+        "$4$",
+        "$8$",
+        "$0$"
+      ],
+      "dogru": "A",
+      "aciklama": "Anakütle varyansında payda $n$ olur: $$\\sigma^2=\\frac{(2-4)^2+(4-4)^2+(6-4)^2}{3}=\\frac{8}{3}.$$"
+    }
+  ]
+}

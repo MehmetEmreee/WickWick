@@ -1,0 +1,96 @@
+{
+  "surum": 1,
+  "set_id": "istatistik-modul-3",
+  "baslik": "Modül 3 · Ortalama, medyan, mod (+ Modül 2 telafi)",
+  "ders": "Mühendisler için İstatistik",
+  "aciklamalari_goster": true,
+  "sorular": [
+    {
+      "id": "T1",
+      "metin": "Bir parçanın rengi hangi veri türü ve ölçek düzeyindedir?",
+      "siklar": [
+        "Nicel, oran",
+        "Nitel, nominal",
+        "Nitel, sıralı",
+        "Nicel, aralık"
+      ],
+      "dogru": "B",
+      "aciklama": "Renk kategoridir; doğal sıralaması bulunmadığı için nominal ölçektedir.",
+      "etiket": "Modül 2 telafi"
+    },
+    {
+      "id": "T2",
+      "metin": "Santigrat cinsinden sıcaklık hangi ölçek düzeyindedir?",
+      "siklar": [
+        "Nominal",
+        "Sıralı",
+        "Aralık",
+        "Oran"
+      ],
+      "dogru": "C",
+      "aciklama": "Eşit sıcaklık farkları anlamlıdır; 0 °C mutlak yokluk değildir. Bu nedenle aralık ölçeğidir.",
+      "etiket": "Modül 2 telafi"
+    },
+    {
+      "id": "S1",
+      "metin": "2, 5, 5, 7, 9, 30 serisi için hangisi doğrudur?",
+      "siklar": [
+        "Medyan 5, mod 5",
+        "Medyan 6, mod 5, ortalama ≈ 9,67",
+        "Medyan 6, mod yok",
+        "Medyan 7, mod 5",
+        "Medyan 6, mod 5, ortalama 6"
+      ],
+      "dogru": "B",
+      "aciklama": "Ortadaki iki değer 5 ve 7: medyan 6. En sık değer 5. Toplam 58, ortalama 58/6 ≈ 9,67."
+    },
+    {
+      "id": "S2",
+      "metin": "Aritmetik ortalama $\\bar x=\\frac{\\sum x}{n}$ ile hesaplanır. 4, 6, 8 için ortalama kaçtır?",
+      "siklar": [
+        "4",
+        "5",
+        "6",
+        "8"
+      ],
+      "dogru": "C",
+      "aciklama": "$$\\bar x=\\frac{4+6+8}{3}=6$$"
+    },
+    {
+      "id": "S3",
+      "metin": "Sıralanmış 1, 3, 4, 8, 20 serisinin medyanı nedir?",
+      "siklar": [
+        "3",
+        "4",
+        "7,2",
+        "8"
+      ],
+      "dogru": "B",
+      "aciklama": "Beş gözlemde medyan üçüncü değerdir: 4."
+    },
+    {
+      "id": "S4",
+      "metin": "1, 1, 2, 2, 3 serisinin modları hangileridir?",
+      "siklar": [
+        "Yalnız 1",
+        "Yalnız 2",
+        "1 ve 2",
+        "3"
+      ],
+      "dogru": "C",
+      "aciklama": "1 ve 2 ikişer kez görülür; en yüksek frekans ikisine aittir."
+    },
+    {
+      "id": "S5",
+      "metin": "Bir seride her gözleme 10 eklenirse $\\bar x$ ve medyan nasıl değişir?",
+      "siklar": [
+        "İkisi de değişmez",
+        "Yalnız ortalama 10 artar",
+        "İkisi de 10 artar",
+        "İkisi de 10 katına çıkar"
+      ],
+      "dogru": "C",
+      "aciklama": "Sabit ekleme sıralamayı korur; ortadaki değer(ler) ve aritmetik ortalama aynı sabit kadar artar."
+    }
+  ]
+}
